@@ -1,0 +1,51 @@
+# Files and directories that must not ship inside the plugin zip.
+# Read by `wp dist-archive`, by 10up/action-wordpress-plugin-deploy, and by
+# this plugin's Plugin Check workflow (.github/workflows/plugin-check.yml),
+# which prunes these before running the checks so CI sees what users get.
+
+# Version control
+.git
+.gitignore
+.gitattributes
+.gitmodules
+
+# CI / GitHub
+.github
+.wordpress-org
+
+# Local development environment
+.wp-env.json
+.wp-env.override.json
+.distignore
+.editorconfig
+node_modules
+vendor
+package.json
+package-lock.json
+composer.json
+composer.lock
+phpcs.xml
+phpcs.xml.dist
+phpunit.xml
+phpunit.xml.dist
+tests
+
+# AI agent tooling
+.claude
+.agents
+skills-lock.json
+CLAUDE.md
+AGENTS.md
+
+# Developer docs (wordpress.org uses readme.txt)
+README.md
+
+# IDE / OS / logs
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.log
+*.zip
+*.bak
+*~

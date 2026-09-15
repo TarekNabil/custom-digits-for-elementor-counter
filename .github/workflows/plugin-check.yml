@@ -25,25 +25,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # The committed .wp-env.json references Elementor and Hello Elementor at
-      # sibling paths that only exist on a local machine. The action merges its
-      # own settings into whatever config it finds and then runs wp-env, so
-      # those paths would make wp-env start fail on the runner.
-      - name: Replace local wp-env config with a CI-safe one
+      # Plugin Check has no .distignore support, so reduce the checkout to the
+      # files that actually ship before running it. Same rsync --exclude-from
+      # semantics 10up/action-wordpress-plugin-deploy uses to build the zip, so
+      # CI judges the plugin users receive rather than the repository.
+      # Pruning .wp-env.json also lets the action generate its own wp-env
+      # config, instead of inheriting local paths that do not exist here.
+      - name: Reduce checkout to the distributable file set
         run: |
-          cat > .wp-env.json <<'JSON'
-          {
-              "plugins": [ "." ],
-              "config": {
-                  "WP_DEBUG": true,
-                  "WP_DEBUG_LOG": true,
-                  "WP_DEBUG_DISPLAY": false
-              }
-          }
-          JSON
+          set -euo pipefail
+          rsync -a --exclude-from='.distignore' --exclude='.git/' ./ "${RUNNER_TEMP}/dist/"
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          rsync -a "${RUNNER_TEMP}/dist/" ./
+          echo "Files Plugin Check will see:"
+          find . -mindepth 1 -not -path './.git/*' -not -name '.git' | sed 's|^\./||' | sort
 
       - name: WordPress Plugin Check
         uses: WordPress/plugin-check-action@v1.1.9
         with:
           build-dir: './'
-          exclude-directories: '.github,.wordpress-org'
