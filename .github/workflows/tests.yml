@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # PCOV rather than Xdebug: it is several times faster and this suite only
       # needs line coverage. mbstring is installed so Digits::character_length
@@ -81,12 +81,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Active LTS. Node only runs the test tooling here: no build step ships
       # anything, so this version never affects the plugin's own JavaScript.
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: npm
