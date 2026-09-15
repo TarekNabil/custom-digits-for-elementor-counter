@@ -1,0 +1,39 @@
+[
+    {
+        "id": "5ec1a01",
+        "elType": "section",
+        "settings": {},
+        "elements": [
+            {
+                "id": "c01a01a",
+                "elType": "column",
+                "settings": {
+                    "_column_size": 100
+                },
+                "elements": [
+                    {
+                        "id": "w1da7a5",
+                        "elType": "widget",
+                        "widgetType": "counter",
+                        "settings": {
+                            "starting_number": 786,
+                            "ending_number": 2025,
+                            "title": "Smoke A: custom digits (786 -> 2025)",
+                            "custom_digits_counter_custom_digits": "٠,١,٢,٣,٤,٥,٦,٧,٨,٩"
+                        }
+                    },
+                    {
+                        "id": "w2c07207",
+                        "elType": "widget",
+                        "widgetType": "counter",
+                        "settings": {
+                            "starting_number": 512,
+                            "ending_number": 1999,
+                            "title": "Smoke B: control, no custom digits (512 -> 1999)"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

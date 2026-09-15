@@ -49,3 +49,6 @@ desktop.ini
 coverage/
 .phpunit.result.cache
 .phpunit.cache/
+
+# Smoke test artifacts
+tests/smoke/output/

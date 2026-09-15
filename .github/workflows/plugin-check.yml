@@ -29,8 +29,8 @@ jobs:
       # files that actually ship before running it. Same rsync --exclude-from
       # semantics 10up/action-wordpress-plugin-deploy uses to build the zip, so
       # CI judges the plugin users receive rather than the repository.
-      # Pruning .wp-env.json also lets the action generate its own wp-env
-      # config, instead of inheriting local paths that do not exist here.
+      # .wp-env.json is pruned along with everything else, so the action
+      # generates its own wp-env config rather than booting the development one.
       - name: Reduce checkout to the distributable file set
         run: |
           set -euo pipefail

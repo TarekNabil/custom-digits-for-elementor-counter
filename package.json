@@ -7,9 +7,14 @@
     "private": true,
     "scripts": {
         "test": "jest",
-        "test:coverage": "jest --coverage"
+        "test:coverage": "jest --coverage",
+        "test:smoke": "bash tests/smoke/run-smoke.sh",
+        "env:start": "wp-env start",
+        "env:update": "wp-env start --update",
+        "env:stop": "wp-env stop"
     },
     "devDependencies": {
+        "@wordpress/env": "^10.0.0",
         "jest": "^30.0.0",
         "jest-environment-jsdom": "^30.0.0"
     }

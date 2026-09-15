@@ -47,15 +47,65 @@ The value is rejected as a whole — and the field outlined in red — unless it
 [![Tests](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml)
 [![Plugin Check](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml)
 [![codecov](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter/branch/main/graph/badge.svg)](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter)
+Three layers, each answering a question the others cannot:
+
+| Command | Covers |
+| --- | --- |
+| `composer test` | 27 PHPUnit tests over the pure digit logic in `Digits` — parsing, validation, substitution. No WordPress needed. |
+| `npm test` | 39 Jest tests over both browser scripts in jsdom — editor validation, animation re-conversion, Elementor hook registration. |
+| `npm run test:smoke` | Boots real WordPress + Elementor and asserts a rendered page actually shows custom digits. |
+
+First-time setup: `composer install && npm install`.
+
+### Smoke test
+
+The unit suites run the pieces in isolation. The smoke test answers the one thing
+they cannot: do the pieces work together inside real WordPress? It boots
+WordPress and Elementor via `wp-env`, publishes a page containing two Counter
+widgets, requests it over HTTP, and asserts the markup:
+
+- the configured counter renders `٢٠٢٥`, not `2025`
+- it carries `data-custom-digits-counter="yes"` and the JSON digit map
+- a second counter with no digit set **keeps** Latin `1999` — the control that
+  catches code converting everything unconditionally
+- the frontend script is enqueued
+- `debug.log` holds no errors from this plugin
+
+Requires **Docker** to be running:
+
+```bash
+npm run test:smoke            # reuse the running environment
+npm run test:smoke -- --fresh # destroy and rebuild it first
+```
+
+Artifacts land in `tests/smoke/output/` (gitignored) — the fetched HTML, the
+captured `debug.log`, and wp-env's own log — which is where to look first when an
+assertion fails.
+
+Note this is *not* an end-to-end test: `curl` runs no JavaScript, so the smoke
+test proves the scripts are **enqueued**, never that they execute.
+
 ## Local development
 
 This repo includes a [`.wp-env.json`](.wp-env.json) for [`@wordpress/env`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/):
 
 ```bash
-npx @wordpress/env start
+npm run env:start     # start it
+npm run env:update    # restart, re-fetching the latest Elementor
+npm run env:stop      # stop it
 ```
 
-This spins up a local WordPress site with Elementor and the Hello Elementor theme pre-installed, and this plugin mounted and active.
+This spins up a local WordPress site on `http://localhost:8888` with Elementor
+and the Hello Elementor theme installed from wordpress.org, and this plugin
+mounted and active.
+
+To develop against a **specific** Elementor build instead, add an
+[`.wp-env.override.json`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/#wp-env-override-json)
+(gitignored). wp-env *replaces* arrays rather than merging them, so repeat `"."`:
+
+```json
+{ "plugins": [ ".", "../elementor.4.2.4/elementor" ] }
+```
 
 ## License
 
