@@ -1,0 +1,46 @@
+# WordPress environment
+.wp-env
+.wp-env.override.json
+wp-content/
+debug.log
+
+# Node & build
+node_modules/
+vendor/
+build/
+dist/
+*.zip
+package-lock.json.bak
+
+# AI agent tooling
+.claude/
+.agents/
+skills-lock.json
+.config/
+.opencode/
+AGENTS.md
+
+# IDE & editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Logs & temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.cache/

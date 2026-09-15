@@ -1,0 +1,19 @@
+{
+    "phpVersion": "8.0",
+    
+    "plugins": [ 
+        ".",
+        "../elementor.4.2.4/elementor"
+        ],
+    "themes": [
+        "../hello-elementor.3.5.1/hello-elementor"
+    ],
+    "config": {
+        "JETPACK_AUTOLOAD_DEV": false,
+        "WP_DEBUG_LOG": true,
+        "SAVEQUERIES": true,
+        "WP_DEBUG_DISPLAY": true,
+        "ALTERNATE_WP_CRON": false,   
+        "WP_Cache": false
+    }
+}

@@ -1,0 +1,5 @@
+.elementor-control textarea.custom-digits-counter-invalid,
+textarea.custom-digits-counter-invalid {
+    border-color: #d33 !important;
+    box-shadow: 0 0 0 1px #d33;
+}
