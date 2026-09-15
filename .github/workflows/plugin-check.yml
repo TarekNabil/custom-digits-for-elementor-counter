@@ -1,0 +1,49 @@
+name: Plugin Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plugin-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The committed .wp-env.json references Elementor and Hello Elementor at
+      # sibling paths that only exist on a local machine. The action merges its
+      # own settings into whatever config it finds and then runs wp-env, so
+      # those paths would make wp-env start fail on the runner.
+      - name: Replace local wp-env config with a CI-safe one
+        run: |
+          cat > .wp-env.json <<'JSON'
+          {
+              "plugins": [ "." ],
+              "config": {
+                  "WP_DEBUG": true,
+                  "WP_DEBUG_LOG": true,
+                  "WP_DEBUG_DISPLAY": false
+              }
+          }
+          JSON
+
+      - name: WordPress Plugin Check
+        uses: WordPress/plugin-check-action@v1.1.9
+        with:
+          build-dir: './'
+          exclude-directories: '.github,.wordpress-org'
