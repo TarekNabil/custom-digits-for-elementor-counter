@@ -21,14 +21,22 @@ jobs:
     name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
 
+    # 8.5 is tested for early warning of upstream deprecations, but must not
+    # turn the repository red: PHPUnit 9.6 is pinned by the 7.4 platform floor
+    # and is not guaranteed to support the newest PHP.
+    continue-on-error: ${{ matrix.experimental || false }}
+
     strategy:
       fail-fast: false
       matrix:
-        # Floor declared in the plugin header, and current stable.
-        php: [ '7.4', '8.3' ]
+        # 7.4 is the floor declared in the plugin header; every release from
+        # there up is covered so a deprecation cannot reach users unseen.
+        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
         include:
           - php: '8.3'
             coverage: true
+          - php: '8.5'
+            experimental: true
 
     steps:
       - name: Checkout
@@ -75,10 +83,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Active LTS. Node only runs the test tooling here: no build step ships
+      # anything, so this version never affects the plugin's own JavaScript.
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
 
       - name: Install dependencies
