@@ -16,7 +16,7 @@
     return text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "_").length;
   }
 
-  // Mirrors Plugin::parse_custom_digits(). An empty field is "not configured",
+  // Mirrors Digits::parse(). An empty field is "not configured",
   // not an error.
   function isValid(value) {
     if ("" === value.trim()) {

@@ -1,0 +1,16 @@
+{
+    "name": "custom-digits-for-elementor-counter",
+    "version": "1.0.0",
+    "description": "Display Elementor's native Counter in any numeral system or custom character set.",
+    "license": "GPL-3.0-or-later",
+    "author": "Tarek Nabil",
+    "private": true,
+    "scripts": {
+        "test": "jest",
+        "test:coverage": "jest --coverage"
+    },
+    "devDependencies": {
+        "jest": "^30.0.0",
+        "jest-environment-jsdom": "^30.0.0"
+    }
+}

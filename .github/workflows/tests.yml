@@ -1,0 +1,97 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Floor declared in the plugin header, and current stable.
+        php: [ '7.4', '8.3' ]
+        include:
+          - php: '8.3'
+            coverage: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # PCOV rather than Xdebug: it is several times faster and this suite only
+      # needs line coverage. mbstring is installed so Digits::character_length
+      # exercises its mb_strlen path, as it will on almost every real host.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring
+          coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Run tests
+        if: ${{ ! matrix.coverage }}
+        run: composer test
+
+      - name: Run tests with coverage
+        if: ${{ matrix.coverage }}
+        run: composer test:coverage
+
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.coverage }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/clover.xml
+          flags: php
+          name: phpunit-php8.3
+          # Surface a broken upload instead of a silently stale badge.
+          fail_ci_if_error: true
+
+  jest:
+    name: Jest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/js/lcov.info
+          flags: js
+          name: jest
+          fail_ci_if_error: true

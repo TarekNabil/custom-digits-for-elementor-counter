@@ -29,6 +29,7 @@ function custom_digits_counter_init() {
 		return;
 	}
 
+	require_once CUSTOM_DIGITS_COUNTER_PLUGIN_PATH . 'includes/class-digits.php';
 	require_once CUSTOM_DIGITS_COUNTER_PLUGIN_PATH . 'includes/class-plugin.php';
 	\CustomDigitsForElementorCounter\Plugin::instance();
 }

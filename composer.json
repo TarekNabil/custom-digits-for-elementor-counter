@@ -1,0 +1,24 @@
+{
+    "name": "tareknabil/custom-digits-for-elementor-counter",
+    "description": "Display Elementor's native Counter in any numeral system or custom character set.",
+    "type": "wordpress-plugin",
+    "license": "GPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Tarek Nabil"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:coverage": "phpunit --coverage-text --coverage-clover=coverage/clover.xml"
+    }
+}

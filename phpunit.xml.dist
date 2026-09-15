@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         beStrictAboutTestsThatDoNotTestAnything="true"
+         beStrictAboutOutputDuringTests="true"
+         failOnWarning="true"
+         failOnRisky="true">
+
+    <testsuites>
+        <testsuite name="unit">
+            <directory suffix="Test.php">tests</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">includes</directory>
+        </include>
+        <exclude>
+            <!-- Needs a live WordPress and Elementor to instantiate: it registers
+                 hooks in its constructor and reads widget settings. Its pure logic
+                 lives in Digits, which is covered. Integration tests for this file
+                 would need wp-env and are not in place yet. -->
+            <file>includes/class-plugin.php</file>
+        </exclude>
+    </coverage>
+</phpunit>

@@ -34,7 +34,7 @@ final class Plugin {
 	 *
 	 * @var int
 	 */
-	const CUSTOM_DIGITS_COUNT = 10;
+	const CUSTOM_DIGITS_COUNT = Digits::COUNT;
 
 	/**
 	 * Data attribute carrying the custom digit set to the frontend script.
@@ -48,7 +48,7 @@ final class Plugin {
 	 *
 	 * @var string
 	 */
-	const CUSTOM_DIGITS_SEPARATOR = ',';
+	const CUSTOM_DIGITS_SEPARATOR = Digits::SEPARATOR;
 
 	/**
 	 * Option storing the plugin version whose markup is currently cached.
@@ -240,41 +240,7 @@ final class Plugin {
 	 * @return string Markup, with counter digits converted if format is Arabic.
 	 */
 	private function convert_counter_digits( $content, $widget ) {
-		$digits = $this->get_custom_digits( $widget );
-
-		if ( empty( $digits ) ) {
-			return $content;
-		}
-
-		$output = preg_replace_callback(
-			// Match the counter number span and capture its inner content.
-			'/(<span[^>]*\sclass=(["\'])(?:[^"\']*\s)?elementor-counter-number(?:\s[^"\']*)?\2[^>]*>)([^<]*)(<\/span>)/',
-			function ( $matches ) use ( $digits ) {
-				// $matches[1] = opening span tag
-				// $matches[3] = inner text (the number, possibly with separators)
-				// $matches[4] = closing span tag
-				return $matches[1] . $this->convert_with_digits( $matches[3], $digits ) . $matches[4];
-			},
-			$content,
-			1
-		);
-
-		if ( null === $output ) {
-			return $content;
-		}
-
-		return $output;
-	}
-
-	/**
-	 * Replaces Latin digits in a string using a custom digit set.
-	 *
-	 * @param string   $text   Text containing Latin digits.
-	 * @param string[] $digits Ten replacement characters indexed 0-9.
-	 * @return string Text with each Latin digit swapped for its custom equivalent.
-	 */
-	private function convert_with_digits( $text, $digits ) {
-		return str_replace( [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ], $digits, $text );
+		return Digits::convert_in_markup( $content, $this->get_custom_digits( $widget ) );
 	}
 
 	/**
@@ -292,55 +258,7 @@ final class Plugin {
 	private function get_custom_digits( $widget ) {
 		$settings = $widget->get_settings_for_display();
 
-		return $this->parse_custom_digits( $settings['custom_digits_counter_custom_digits'] ?? '' );
-	}
-
-	/**
-	 * Validates a raw "Custom Digits" string into a digit map.
-	 *
-	 * @param mixed $value Raw control value.
-	 * @return string[] Ten digit characters indexed 0-9, or an empty array if invalid.
-	 */
-	private function parse_custom_digits( $value ) {
-		if ( ! is_string( $value ) || '' === trim( $value ) ) {
-			return [];
-		}
-
-		$parts = explode( self::CUSTOM_DIGITS_SEPARATOR, $value );
-
-		if ( self::CUSTOM_DIGITS_COUNT !== count( $parts ) ) {
-			return [];
-		}
-
-		$digits = [];
-
-		foreach ( $parts as $part ) {
-			$part = trim( $part );
-
-			if ( 1 !== $this->character_length( $part ) ) {
-				return [];
-			}
-
-			$digits[] = $part;
-		}
-
-		return $digits;
-	}
-
-	/**
-	 * Counts characters in a UTF-8 string without requiring mbstring.
-	 *
-	 * @param string $text Text to measure.
-	 * @return int Character count, or -1 if the text is not valid UTF-8.
-	 */
-	private function character_length( $text ) {
-		if ( function_exists( 'mb_strlen' ) ) {
-			return \mb_strlen( $text, 'UTF-8' );
-		}
-
-		$count = preg_match_all( '/./us', $text );
-
-		return false === $count ? -1 : $count;
+		return Digits::parse( $settings['custom_digits_counter_custom_digits'] ?? '' );
 	}
 
 	/**
@@ -393,7 +311,7 @@ final class Plugin {
 	 * Enqueues the editor script that flags an invalid "Custom Digits" value.
 	 *
 	 * The validation rules are handed to the script rather than restated in it,
-	 * so the editor and `parse_custom_digits()` cannot drift apart.
+	 * so the editor and `Digits::parse()` cannot drift apart.
 	 *
 	 * @return void
 	 */

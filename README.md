@@ -43,7 +43,10 @@ The value is rejected as a whole — and the field outlined in red — unless it
 - [`includes/class-plugin.php`](includes/class-plugin.php) registers the widget control, validates the digit set, substitutes the digits in the rendered markup, and injects `data-custom-digits-counter="yes"` plus the digit set as JSON in `data-custom-digits-counter-map`. It also clears Elementor's element cache when the plugin version changes, since Elementor otherwise serves stored markup without re-running the render filter.
 - [`assets/js/custom-digits-counter.js`](assets/js/custom-digits-counter.js) scans for counters flagged with `data-custom-digits-counter="yes"` as soon as it runs (and again on `DOMContentLoaded`/`load`, plus Elementor's `frontend/element_ready/counter.default` event for widgets rendered later). For each one it reads the digit set from the data attribute and watches the element with a `MutationObserver`, re-converting the text as Elementor's counter animation rewrites it.
 - [`assets/js/custom-digits-counter-editor.js`](assets/js/custom-digits-counter-editor.js) and [`assets/css/custom-digits-counter-editor.css`](assets/css/custom-digits-counter-editor.css) run in the editor only, mirroring the PHP validation so an invalid value is flagged as it is typed. The rules are passed from PHP to the script, so the two validators cannot drift apart.
-
+## Tests
+[![Tests](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml)
+[![Plugin Check](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml)
+[![codecov](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter/branch/main/graph/badge.svg)](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter)
 ## Local development
 
 This repo includes a [`.wp-env.json`](.wp-env.json) for [`@wordpress/env`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/):

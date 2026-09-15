@@ -44,3 +44,8 @@ desktop.ini
 *.swp
 *~
 .cache/
+
+# PHPUnit & coverage
+coverage/
+.phpunit.result.cache
+.phpunit.cache/

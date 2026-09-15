@@ -1,0 +1,32 @@
+# Codecov configuration. Validate changes with:
+#   curl -X POST --data-binary @codecov.yml https://codecov.io/validate
+
+coverage:
+  status:
+    # Overall coverage must not slip below where it already is.
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    # New and changed lines in a pull request are held to a fixed bar; this is
+    # the check that actually keeps coverage from eroding over time.
+    patch:
+      default:
+        target: 80%
+
+flags:
+  php:
+    paths:
+      - includes/
+  js:
+    paths:
+      - assets/js/
+
+comment:
+  layout: "reach, diff, files"
+  require_changes: true
+
+ignore:
+  # Requires a live WordPress and Elementor; see the note in phpunit.xml.dist.
+  - "includes/class-plugin.php"
+  - "tests/**"

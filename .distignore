@@ -22,13 +22,17 @@ node_modules
 vendor
 package.json
 package-lock.json
+jest.config.js
 composer.json
 composer.lock
 phpcs.xml
 phpcs.xml.dist
 phpunit.xml
 phpunit.xml.dist
+.phpunit.result.cache
 tests
+coverage
+codecov.yml
 
 # AI agent tooling
 .claude
