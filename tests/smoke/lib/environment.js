@@ -1,0 +1,259 @@
+/**
+ * wp-env and container plumbing for the smoke suite.
+ *
+ * Shared by globalSetup, globalTeardown and the tests themselves. Everything
+ * here shells out to docker or wp-env: the smoke test needs a real WordPress,
+ * and that means driving real processes.
+ */
+
+"use strict";
+
+const { execFileSync } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+
+const ROOT = path.resolve(__dirname, "..", "..", "..");
+const PLUGIN_SLUG = path.basename(ROOT);
+const OUT_DIR = path.join(ROOT, "tests", "smoke", "output");
+const LOG_FILE = path.join(OUT_DIR, "wp-env.log");
+const STATE_FILE = path.join(OUT_DIR, "state.json");
+const PAGE_FILE = path.join(OUT_DIR, "page.html");
+const WP_ENV = path.join(ROOT, "node_modules", ".bin", "wp-env");
+const OVERRIDE_FILE = path.join(ROOT, ".wp-env.override.json");
+
+const PLUGIN_DESTINATION = `/var/www/html/wp-content/plugins/${PLUGIN_SLUG}`;
+const CONTAINER_SMOKE = `${PLUGIN_DESTINATION}/tests/smoke`;
+const SOURCE_PROBE = "https://downloads.wordpress.org/plugin/elementor.zip";
+const BASE_URL = `http://localhost:${process.env.WP_ENV_PORT || "8888"}`;
+
+function log(message) {
+    fs.mkdirSync(OUT_DIR, { recursive: true });
+    fs.appendFileSync(LOG_FILE, `${message}\n`);
+}
+
+/**
+ * Runs a command, returning stdout. Stderr is kept in the log rather than
+ * thrown away, because wp-env reports the useful part of a failure there.
+ */
+function run(command, args, options = {}) {
+    try {
+        return execFileSync(command, args, {
+            cwd: ROOT,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+            maxBuffer: 32 * 1024 * 1024,
+            ...options,
+        });
+    } catch (error) {
+        const stderr = (error.stderr || "").toString();
+        const stdout = (error.stdout || "").toString();
+        log(`FAILED: ${command} ${args.join(" ")}\n${stdout}\n${stderr}`);
+        error.message = `${command} ${args.join(" ")} failed\n${stderr || stdout}`.trim();
+        throw error;
+    }
+}
+
+/** Runs wp-cli inside the container.
+ *
+ * `wp-env run` is deliberately avoided: it re-resolves the remote plugin and
+ * theme URLs from .wp-env.json on every invocation, so it fails with a TLS
+ * error whenever wordpress.org is unreachable, even though the container is
+ * healthy. Going direct also skips spawning Node per command.
+ */
+function wp(container, args) {
+    return run("docker", ["exec", container, "wp", "--allow-root", ...args]);
+}
+
+/**
+ * Finds this project's CLI container by the plugin directory it has mounted.
+ *
+ * Matching is on the mount DESTINATION, and on the source only as a suffix:
+ * Docker Desktop rewrites bind-mount sources (reporting /host_mnt/home/... for
+ * /home/...), so comparing a source to the project path exactly finds nothing.
+ */
+function findCliContainer() {
+    let names;
+
+    try {
+        names = run("docker", ["ps", "--format", "{{.Names}}"])
+            .split("\n")
+            .map((name) => name.trim())
+            .filter((name) => name.endsWith("-cli-1") && !name.endsWith("-tests-cli-1"));
+    } catch {
+        return null;
+    }
+
+    const template =
+        `{{range .Mounts}}{{if eq .Destination "${PLUGIN_DESTINATION}"}}{{.Source}}{{end}}{{end}}`;
+
+    for (const name of names) {
+        let source = "";
+
+        try {
+            source = run("docker", ["inspect", "-f", template, name]).trim();
+        } catch {
+            continue;
+        }
+
+        if (source && (source === ROOT || source.endsWith(ROOT))) {
+            return name;
+        }
+    }
+
+    return null;
+}
+
+function cliAnswers(container) {
+    try {
+        wp(container, ["--info"]);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** Locates a sibling checkout, for running without wordpress.org access. */
+function detectSibling(prefix, marker) {
+    const parent = path.dirname(ROOT);
+    let entries = [];
+
+    try {
+        entries = fs.readdirSync(parent);
+    } catch {
+        return null;
+    }
+
+    for (const entry of entries.sort()) {
+        if (!entry.startsWith(prefix)) {
+            continue;
+        }
+
+        const candidate = path.join(parent, entry, prefix);
+
+        if (fs.existsSync(path.join(candidate, marker))) {
+            return candidate;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Makes sure Elementor and the theme can be installed.
+ *
+ * wp-env fetches the zip URLs named in .wp-env.json during start, and a failed
+ * fetch aborts the start once only MySQL is up — which surfaces much later as an
+ * unrelated container error. Fail here instead, with the real reason.
+ */
+function ensureSources() {
+    if (process.env.SMOKE_LOCAL_SOURCES === "1") {
+        const plugin = detectSibling("elementor", "elementor.php");
+        const theme = detectSibling("hello-elementor", "style.css");
+
+        if (!plugin || !theme) {
+            throw new Error(
+                "SMOKE_LOCAL_SOURCES=1 but no sibling elementor/ and hello-elementor/ checkouts were found"
+            );
+        }
+
+        // wp-env REPLACES arrays from .wp-env.json rather than merging them, so
+        // the override has to restate "." alongside the local sources.
+        fs.writeFileSync(
+            OVERRIDE_FILE,
+            `${JSON.stringify({ plugins: [".", path.relative(ROOT, plugin)], themes: [path.relative(ROOT, theme)] }, null, 4)}\n`
+        );
+        log(`wrote .wp-env.override.json -> ${plugin}, ${theme}`);
+        return;
+    }
+
+    if (fs.existsSync(OVERRIDE_FILE)) {
+        return;
+    }
+
+    try {
+        run("curl", ["-fsS", "--max-time", "20", "-o", "/dev/null", SOURCE_PROBE]);
+    } catch {
+        const hint = detectSibling("elementor", "elementor.php")
+            ? "A local Elementor checkout was found — run: npm run test:smoke:local"
+            : "Restore network access, or create .wp-env.override.json pointing at local checkouts.";
+
+        throw new Error(
+            `Cannot reach ${SOURCE_PROBE}, which wp-env needs to install Elementor and Hello Elementor.\n${hint}`
+        );
+    }
+}
+
+/** Brings the environment up if needed and returns the CLI container name. */
+function ensureEnvironment() {
+    fs.mkdirSync(OUT_DIR, { recursive: true });
+
+    try {
+        run("docker", ["info"]);
+    } catch {
+        throw new Error("Docker is not reachable — start Docker and retry.");
+    }
+
+    if (!fs.existsSync(WP_ENV)) {
+        throw new Error("wp-env is missing — run: npm install");
+    }
+
+    // Reuse a healthy environment. Beyond saving minutes per run, `wp-env start`
+    // contacts wordpress.org for an update check and fails outright when that is
+    // unreachable, even though the containers are already running and fine.
+    const running = findCliContainer();
+
+    if (running && cliAnswers(running)) {
+        log(`reusing running environment (${running})`);
+        return running;
+    }
+
+    ensureSources();
+    log("starting wp-env");
+    run(WP_ENV, ["start"]);
+
+    // wp-env can exit 0 having brought up only some services, so find the
+    // container and prove wp-cli answers rather than trusting the exit code.
+    const container = findCliContainer();
+
+    if (!container) {
+        throw new Error(
+            `wp-env start reported success but no running CLI container has ${ROOT} mounted. See ${LOG_FILE}`
+        );
+    }
+
+    if (!cliAnswers(container)) {
+        throw new Error(`wp-cli does not answer in ${container}. See ${LOG_FILE}`);
+    }
+
+    return container;
+}
+
+function writeState(state) {
+    fs.mkdirSync(OUT_DIR, { recursive: true });
+    fs.writeFileSync(STATE_FILE, `${JSON.stringify(state, null, 4)}\n`);
+}
+
+function readState() {
+    if (!fs.existsSync(STATE_FILE)) {
+        throw new Error(`${STATE_FILE} is missing — globalSetup did not complete.`);
+    }
+
+    return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+}
+
+module.exports = {
+    BASE_URL,
+    CONTAINER_SMOKE,
+    LOG_FILE,
+    OUT_DIR,
+    PAGE_FILE,
+    PLUGIN_SLUG,
+    ROOT,
+    ensureEnvironment,
+    findCliContainer,
+    log,
+    readState,
+    run,
+    wp,
+    writeState,
+};

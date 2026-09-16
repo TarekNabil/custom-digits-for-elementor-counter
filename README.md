@@ -53,7 +53,7 @@ Three layers, each answering a question the others cannot:
 | --- | --- |
 | `composer test` | 27 PHPUnit tests over the pure digit logic in `Digits` — parsing, validation, substitution. No WordPress needed. |
 | `npm test` | 39 Jest tests over both browser scripts in jsdom — editor validation, animation re-conversion, Elementor hook registration. |
-| `npm run test:smoke` | Boots real WordPress + Elementor and asserts a rendered page actually shows custom digits. |
+| `npm run test:smoke` | 28 Jest tests that boot real WordPress + Elementor and assert a rendered page actually shows custom digits. Needs Docker. |
 
 First-time setup: `composer install && npm install`.
 
@@ -74,13 +74,18 @@ widgets, requests it over HTTP, and asserts the markup:
 Requires **Docker** to be running:
 
 ```bash
-npm run test:smoke            # reuse the running environment
-npm run test:smoke -- --fresh # destroy and rebuild it first
+npm run test:smoke         # reuse the running environment (starts one if needed)
+npm run test:smoke:local   # use sibling Elementor/theme checkouts instead of
+                           # downloading them from wordpress.org
 ```
 
+It is a Jest suite (`jest.smoke.config.js`), separate from `npm test` so the unit
+tests stay fast and need no Docker. `npm run test:smoke -- --verbose
+--reporters=default` lists each assertion, and `-t` filters as usual.
+
 Artifacts land in `tests/smoke/output/` (gitignored) — the fetched HTML, the
-captured `debug.log`, and wp-env's own log — which is where to look first when an
-assertion fails.
+captured `debug.log`, wp-env's own log, and the run's `state.json` — which is
+where to look first when an assertion fails.
 
 Note this is *not* an end-to-end test: `curl` runs no JavaScript, so the smoke
 test proves the scripts are **enqueued**, never that they execute.
