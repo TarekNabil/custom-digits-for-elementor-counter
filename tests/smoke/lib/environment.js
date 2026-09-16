@@ -112,11 +112,17 @@ function cliAnswers(container) {
 }
 
 /**
- * Makes sure Elementor and the theme can be installed.
+ * Makes sure Elementor and the theme can be downloaded.
  *
  * wp-env fetches the zip URLs named in .wp-env.json during start, and a failed
  * fetch aborts the start once only MySQL is up — which surfaces much later as an
  * unrelated container error. Fail here instead, with the real reason.
+ *
+ * The probe is a fixed URL rather than one read from the configuration: every
+ * supported source is a wordpress.org download, including a version-pinned
+ * override. If local paths ever become a supported source again, this has to
+ * read the effective configuration instead, or it will block a run that needs
+ * no network at all.
  */
 function ensureSources() {
     try {
@@ -124,7 +130,7 @@ function ensureSources() {
     } catch {
         throw new Error(
             `Cannot reach ${SOURCE_PROBE}, which wp-env needs to install Elementor and Hello Elementor.\n` +
-                "Restore network access, or point .wp-env.json (or .wp-env.override.json) at a local checkout."
+                "Check network or proxy access to downloads.wordpress.org and retry."
         );
     }
 }
