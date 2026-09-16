@@ -21,6 +21,9 @@ jobs:
     name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
 
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
     # 8.5 is tested for early warning of upstream deprecations, but must not
     # turn the repository red: PHPUnit 9.6 is pinned by the 7.4 platform floor
     # and is not guaranteed to support the newest PHP.
@@ -64,20 +67,29 @@ jobs:
         if: ${{ matrix.coverage }}
         run: composer test:coverage
 
+      # Skipped when no token is available. Dependabot runs and pull requests
+      # from forks are denied repository secrets by design, so the token is
+      # empty there and Codecov refuses a tokenless upload to a protected
+      # branch. A dependency bump does not change coverage, so skipping is
+      # correct — failing the job would just train everyone to ignore red.
       - name: Upload coverage to Codecov
-        if: ${{ matrix.coverage }}
+        if: ${{ matrix.coverage && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
           files: ./coverage/clover.xml
           flags: php
           name: phpunit-php8.3
-          # Surface a broken upload instead of a silently stale badge.
+          # Where a token IS present, a failed upload must be visible rather
+          # than leaving a silently stale badge.
           fail_ci_if_error: true
 
   jest:
     name: Jest
     runs-on: ubuntu-latest
+
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
       - name: Checkout
@@ -97,10 +109,12 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+      # See the note on the PHPUnit upload: skipped without a token.
       - name: Upload coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
           files: ./coverage/js/lcov.info
           flags: js
           name: jest

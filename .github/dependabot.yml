@@ -1,0 +1,66 @@
+# Dependabot keeps the development toolchain current. It cannot see WordPress or
+# Elementor: those are installed by wp-env from wordpress.org zip URLs, not
+# declared as packages. The Smoke Test workflow covers that instead, because a
+# cold CI runner always downloads the latest release of both.
+version: 2
+
+updates:
+  # The highest-value ecosystem for this repo. Pinned action majors go stale
+  # quietly, and GitHub retires the Node runtimes they declare — exactly the
+  # node20 deprecation that hit actions/checkout@v4 here.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # jest, jest-environment-jsdom and @wordpress/env. All dev-only: nothing from
+  # npm ships in the plugin zip.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
+
+  # PHPUnit only, and it stays on 9.x while composer.json pins the platform to
+  # PHP 7.4 — PHPUnit 10+ requires PHP 8.1, so Dependabot will correctly hold it
+  # back rather than proposing an impossible upgrade.
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "php"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
