@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Plugin Check has no .distignore support, so reduce the checkout to the
       # files that actually ship before running it. Same rsync --exclude-from
