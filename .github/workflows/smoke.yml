@@ -1,0 +1,63 @@
+name: Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: WordPress + Elementor
+    runs-on: ubuntu-latest
+    # Booting wp-env from cold pulls Docker images, WordPress, Elementor and the
+    # theme. Generous, but bounded: a hung Docker pull must not run for hours.
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Docker is preinstalled on ubuntu-latest, so wp-env needs no setup beyond
+      # this. Recorded in the log because a Docker or Compose upgrade on the
+      # runner image is a plausible cause of a previously green run failing.
+      - name: Report Docker version
+        run: |
+          docker --version
+          docker compose version
+
+      # Elementor and Hello Elementor come from the wordpress.org zip URLs in
+      # .wp-env.json. No --local-sources here: a runner has no sibling checkouts,
+      # and unlike a laptop it always has wordpress.org access.
+      - name: Run smoke test
+        run: npm run test:smoke
+
+      # The captured HTML, debug.log, wp-env log and state.json are the only way
+      # to diagnose a CI-only failure, so keep them even when the job fails.
+      - name: Upload artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: smoke-output
+          path: tests/smoke/output/
+          retention-days: 7
+          if-no-files-found: warn
