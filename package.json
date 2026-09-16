@@ -9,7 +9,6 @@
         "test": "jest",
         "test:coverage": "jest --coverage",
         "test:smoke": "jest --config jest.smoke.config.js",
-        "test:smoke:local": "SMOKE_LOCAL_SOURCES=1 jest --config jest.smoke.config.js",
         "env:start": "wp-env start",
         "env:update": "wp-env start --update",
         "env:stop": "wp-env stop"

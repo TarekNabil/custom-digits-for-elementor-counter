@@ -46,8 +46,8 @@ jobs:
           docker compose version
 
       # Elementor and Hello Elementor come from the wordpress.org zip URLs in
-      # .wp-env.json. No --local-sources here: a runner has no sibling checkouts,
-      # and unlike a laptop it always has wordpress.org access.
+      # .wp-env.json, downloaded fresh: a runner has no cached environment to
+      # reuse, so this also exercises the cold-start path.
       - name: Run smoke test
         run: npm run test:smoke
 
