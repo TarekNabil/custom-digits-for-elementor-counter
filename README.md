@@ -46,6 +46,7 @@ The value is rejected as a whole — and the field outlined in red — unless it
 ## Tests
 [![Tests](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml)
 [![Plugin Check](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml)
+[![Smoke Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
 [![codecov](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter/branch/main/graph/badge.svg)](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter)
 Three layers, each answering a question the others cannot:
 
@@ -74,9 +75,7 @@ widgets, requests it over HTTP, and asserts the markup:
 Requires **Docker** to be running:
 
 ```bash
-npm run test:smoke         # reuse the running environment (starts one if needed)
-npm run test:smoke:local   # use sibling Elementor/theme checkouts instead of
-                           # downloading them from wordpress.org
+npm run test:smoke   # reuses the running environment, starting one if needed
 ```
 
 It is a Jest suite (`jest.smoke.config.js`), separate from `npm test` so the unit
@@ -104,12 +103,16 @@ This spins up a local WordPress site on `http://localhost:8888` with Elementor
 and the Hello Elementor theme installed from wordpress.org, and this plugin
 mounted and active.
 
-To develop against a **specific** Elementor build instead, add an
-[`.wp-env.override.json`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/#wp-env-override-json)
+Elementor and the theme track the latest wordpress.org releases. wp-env caches
+each download, so you stay on the version you last fetched until `npm run
+env:update` — "latest" refreshes deliberately, not silently.
+
+To pin a **specific** Elementor while reproducing a bug, add a version to the URL
+in an [`.wp-env.override.json`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/#wp-env-override-json)
 (gitignored). wp-env *replaces* arrays rather than merging them, so repeat `"."`:
 
 ```json
-{ "plugins": [ ".", "../elementor.4.2.4/elementor" ] }
+{ "plugins": [ ".", "https://downloads.wordpress.org/plugin/elementor.4.2.4.zip" ] }
 ```
 
 ## License

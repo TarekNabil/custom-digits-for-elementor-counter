@@ -19,7 +19,6 @@ const LOG_FILE = path.join(OUT_DIR, "wp-env.log");
 const STATE_FILE = path.join(OUT_DIR, "state.json");
 const PAGE_FILE = path.join(OUT_DIR, "page.html");
 const WP_ENV = path.join(ROOT, "node_modules", ".bin", "wp-env");
-const OVERRIDE_FILE = path.join(ROOT, ".wp-env.override.json");
 
 const PLUGIN_DESTINATION = `/var/www/html/wp-content/plugins/${PLUGIN_SLUG}`;
 const CONTAINER_SMOKE = `${PLUGIN_DESTINATION}/tests/smoke`;
@@ -112,73 +111,26 @@ function cliAnswers(container) {
     }
 }
 
-/** Locates a sibling checkout, for running without wordpress.org access. */
-function detectSibling(prefix, marker) {
-    const parent = path.dirname(ROOT);
-    let entries = [];
-
-    try {
-        entries = fs.readdirSync(parent);
-    } catch {
-        return null;
-    }
-
-    for (const entry of entries.sort()) {
-        if (!entry.startsWith(prefix)) {
-            continue;
-        }
-
-        const candidate = path.join(parent, entry, prefix);
-
-        if (fs.existsSync(path.join(candidate, marker))) {
-            return candidate;
-        }
-    }
-
-    return null;
-}
-
 /**
- * Makes sure Elementor and the theme can be installed.
+ * Makes sure Elementor and the theme can be downloaded.
  *
  * wp-env fetches the zip URLs named in .wp-env.json during start, and a failed
  * fetch aborts the start once only MySQL is up — which surfaces much later as an
  * unrelated container error. Fail here instead, with the real reason.
+ *
+ * The probe is a fixed URL rather than one read from the configuration: every
+ * supported source is a wordpress.org download, including a version-pinned
+ * override. If local paths ever become a supported source again, this has to
+ * read the effective configuration instead, or it will block a run that needs
+ * no network at all.
  */
 function ensureSources() {
-    if (process.env.SMOKE_LOCAL_SOURCES === "1") {
-        const plugin = detectSibling("elementor", "elementor.php");
-        const theme = detectSibling("hello-elementor", "style.css");
-
-        if (!plugin || !theme) {
-            throw new Error(
-                "SMOKE_LOCAL_SOURCES=1 but no sibling elementor/ and hello-elementor/ checkouts were found"
-            );
-        }
-
-        // wp-env REPLACES arrays from .wp-env.json rather than merging them, so
-        // the override has to restate "." alongside the local sources.
-        fs.writeFileSync(
-            OVERRIDE_FILE,
-            `${JSON.stringify({ plugins: [".", path.relative(ROOT, plugin)], themes: [path.relative(ROOT, theme)] }, null, 4)}\n`
-        );
-        log(`wrote .wp-env.override.json -> ${plugin}, ${theme}`);
-        return;
-    }
-
-    if (fs.existsSync(OVERRIDE_FILE)) {
-        return;
-    }
-
     try {
         run("curl", ["-fsS", "--max-time", "20", "-o", "/dev/null", SOURCE_PROBE]);
     } catch {
-        const hint = detectSibling("elementor", "elementor.php")
-            ? "A local Elementor checkout was found — run: npm run test:smoke:local"
-            : "Restore network access, or create .wp-env.override.json pointing at local checkouts.";
-
         throw new Error(
-            `Cannot reach ${SOURCE_PROBE}, which wp-env needs to install Elementor and Hello Elementor.\n${hint}`
+            `Cannot reach ${SOURCE_PROBE}, which wp-env needs to install Elementor and Hello Elementor.\n` +
+                "Check network or proxy access to downloads.wordpress.org and retry."
         );
     }
 }
@@ -244,16 +196,11 @@ function readState() {
 module.exports = {
     BASE_URL,
     CONTAINER_SMOKE,
-    LOG_FILE,
-    OUT_DIR,
     PAGE_FILE,
     PLUGIN_SLUG,
-    ROOT,
     ensureEnvironment,
-    findCliContainer,
     log,
     readState,
-    run,
     wp,
     writeState,
 };
