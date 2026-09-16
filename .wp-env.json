@@ -1,8 +1,8 @@
 {
     "phpVersion": "8.3",
     "plugins": [
-        ".",
-        "https://downloads.wordpress.org/plugin/elementor.zip"
+        "https://downloads.wordpress.org/plugin/elementor.zip",
+        "."
     ],
     "themes": [
         "https://downloads.wordpress.org/theme/hello-elementor.zip"
