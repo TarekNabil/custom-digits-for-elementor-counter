@@ -24,6 +24,7 @@ package.json
 package-lock.json
 jest.config.js
 jest.smoke.config.js
+playwright.config.js
 composer.json
 composer.lock
 phpcs.xml
