@@ -52,3 +52,9 @@ coverage/
 
 # Smoke test artifacts
 tests/smoke/output/
+
+# E2E test artifacts
+tests/e2e/output/
+/test-results/
+/playwright-report/
+/blob-report/

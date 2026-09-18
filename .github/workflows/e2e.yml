@@ -1,0 +1,70 @@
+name: E2E Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: WordPress + Elementor (Playwright)
+    runs-on: ubuntu-latest
+    # Booting wp-env from cold pulls Docker images, WordPress, Elementor and the
+    # theme, on top of three browser downloads for Playwright. Generous, but
+    # bounded: a hung pull must not run for hours.
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      # Docker is preinstalled on ubuntu-latest, so wp-env needs no setup beyond
+      # this. Recorded in the log because a Docker or Compose upgrade on the
+      # runner image is a plausible cause of a previously green run failing.
+      - name: Report Docker version
+        run: |
+          docker --version
+          docker compose version
+
+      # Elementor and Hello Elementor come from the wordpress.org zip URLs in
+      # .wp-env.json, downloaded fresh: a runner has no cached environment to
+      # reuse, so this also exercises the cold-start path.
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      # The Playwright report/traces and the wp-env log/state are the only way
+      # to diagnose a CI-only failure, so keep them even when the job fails.
+      - name: Upload artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-output
+          path: |
+            playwright-report/
+            test-results/
+            tests/e2e/output/
+          retention-days: 7
+          if-no-files-found: warn

@@ -47,14 +47,16 @@ The value is rejected as a whole — and the field outlined in red — unless it
 [![Tests](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml)
 [![Plugin Check](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml)
 [![Smoke Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
+[![E2E Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml)
 [![codecov](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter/branch/main/graph/badge.svg)](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter)
-Three layers, each answering a question the others cannot:
+Four layers, each answering a question the others cannot:
 
 | Command | Covers |
 | --- | --- |
 | `composer test` | 27 PHPUnit tests over the pure digit logic in `Digits` — parsing, validation, substitution. No WordPress needed. |
 | `npm test` | 39 Jest tests over both browser scripts in jsdom — editor validation, animation re-conversion, Elementor hook registration. |
 | `npm run test:smoke` | 28 Jest tests that boot real WordPress + Elementor and assert a rendered page actually shows custom digits. Needs Docker. |
+| `npm run test:e2e` | Playwright tests that load the page in real Chromium/Firefox/WebKit and watch the count-up animation live. Needs Docker and Playwright's browsers. |
 
 First-time setup: `composer install && npm install`.
 
@@ -88,6 +90,32 @@ where to look first when an assertion fails.
 
 Note this is *not* an end-to-end test: `curl` runs no JavaScript, so the smoke
 test proves the scripts are **enqueued**, never that they execute.
+
+### End-to-end test
+
+The smoke test proves the scripts are enqueued; it can't prove they run. This
+suite boots WordPress and Elementor via `wp-env` — independently of the smoke
+suite's own environment code, so the two don't share fixtures or setup — then
+loads the published page in real Chromium, Firefox and WebKit and watches the
+`elementor-counter-number` element while Elementor's own JavaScript animates
+it, asserting:
+
+- the counter already shows custom digits on its first rendered frame, not
+  just once the animation settles
+- across every mutation of the count-up (786 → 2025), the text is always
+  Arabic-Indic digits and never a Latin one flashes through mid-animation
+- the control counter (no digit set, 512 → 1999) stays Latin throughout
+- the frontend script raises no console errors
+
+Requires **Docker** running, plus Playwright's browsers installed once:
+
+```bash
+npx playwright install --with-deps
+npm run test:e2e
+```
+
+Artifacts (HTML report, traces, wp-env log) land in `tests/e2e/output/` and
+`playwright-report/` (both gitignored).
 
 ## Local development
 
