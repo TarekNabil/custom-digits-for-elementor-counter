@@ -1,0 +1,101 @@
+name: Pre-release Test
+
+# Every other workflow tests current stable WordPress and Elementor. This one runs
+# the same suites against the nightly builds of both, so a breaking upstream change
+# shows up before it reaches users.
+#
+# Not on push or pull_request: the code here does not change between runs, the
+# upstream builds do. Use workflow_dispatch to run it on demand.
+on:
+  schedule:
+    # Mondays, 04:17 UTC. Off the hour because scheduled jobs queue behind
+    # everything that picks :00.
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prerelease-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prerelease:
+    name: WordPress + Elementor nightly
+    runs-on: ubuntu-latest
+    # Higher than the 20 minutes smoke and e2e use: the WordPress nightly zip alone
+    # is a ~61 MB cold download, on top of Docker images and three browsers.
+    timeout-minutes: 30
+
+    env:
+      # wp-env reads WP_ENV_CORE directly, so WordPress needs no config file.
+      WP_ENV_CORE: https://wordpress.org/nightly-builds/wordpress-latest.zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Report Docker version
+        run: |
+          docker --version
+          docker compose version
+
+      # There is no WP_ENV_PLUGINS, so Elementor can only be swapped through a
+      # config file. wp-env REPLACES arrays from an override rather than merging
+      # them, so "." has to be repeated or this plugin would not be installed at
+      # all - and Elementor stays first, so it loads before its addon (PR #9).
+      #
+      # "nightly" is a rolling tag: the same URL always serves the newest build.
+      - name: Point Elementor at the nightly build
+        run: |
+          cat > .wp-env.override.json <<'JSON'
+          {
+              "plugins": [
+                  "https://github.com/elementor/elementor/releases/download/nightly/elementor-nightly.zip",
+                  "."
+              ]
+          }
+          JSON
+          cat .wp-env.override.json
+
+      - name: Run smoke test
+        run: npm run test:smoke
+
+      # The smoke suite records the versions it actually booted. Printing them means
+      # a green run says which builds it tested, rather than leaving you to assume.
+      - name: Report the versions under test
+        if: ${{ !cancelled() }}
+        run: |
+          node -e '
+            const s = require("./tests/smoke/output/state.json");
+            console.log("WordPress:", s.wordpressVersion, "| Elementor:", s.elementorVersion);
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      - name: Upload artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: prerelease-output
+          path: |
+            tests/smoke/output/
+            tests/e2e/output/
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: warn

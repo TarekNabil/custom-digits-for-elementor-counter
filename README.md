@@ -47,7 +47,7 @@ are untouched.
 
 | | |
 | --- | --- |
-| WordPress | 6.0 or later |
+| WordPress | 6.8 or later (Elementor itself requires 6.8) |
 | PHP | 7.4 or later |
 | [Elementor](https://wordpress.org/plugins/elementor/) | installed and active |
 
@@ -235,6 +235,30 @@ a failure in one never masks another:
 Plugin Check runs against the **pruned** file set — the checkout is reduced using
 [`.distignore`](.distignore) first, so CI judges the plugin users actually
 receive rather than the repository.
+
+### Testing upcoming releases
+
+Those four all test **current stable**. This plugin reads Elementor's counter
+markup with a regex and hooks its render attributes, so a release that is
+perfectly valid for Elementor can still break it — and the first run against a new
+release would otherwise happen after users already have it.
+
+[Pre-release Test](.github/workflows/prerelease.yml) runs the smoke and e2e suites
+against the nightly builds of both, **weekly** rather than on push, since it is the
+upstream builds that change between runs and not this code:
+
+| | Source |
+| --- | --- |
+| WordPress | [trunk nightly](https://wordpress.org/nightly-builds/wordpress-latest.zip), via `WP_ENV_CORE` |
+| Elementor | [`nightly` rolling release](https://github.com/elementor/elementor/releases/tag/nightly), via a generated `.wp-env.override.json` |
+
+Both URLs are fixed and always serve the newest build, so there is nothing to
+resolve. Note that Elementor's `nightly` tracks `main`, which is further ahead than
+the next release — breakage shows up early, and occasionally for something that
+gets fixed before it ships.
+
+The run summary records the WordPress and Elementor versions it actually booted, so
+a green run says what it tested rather than leaving you to assume.
 
 ## License
 

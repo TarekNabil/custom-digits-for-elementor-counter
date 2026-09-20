@@ -27,7 +27,7 @@ This is a WordPress plugin that extends Elementor's native Counter widget to sup
 - JavaScript global namespace prefix: `customDigitsCounter` or wrap in IIFE (already done).
 
 ### Dependencies & Version Requirements
-- Minimum WordPress: 6.0
+- Minimum WordPress: 6.8 (set by Elementor, which requires 6.8)
 - Minimum PHP: 7.4
 - Required plugin: Elementor (checked at init, shows admin notice if missing)
 - Always declare in main plugin file header.

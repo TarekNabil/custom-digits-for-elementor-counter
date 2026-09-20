@@ -25,15 +25,18 @@ const {
 module.exports = async function globalSetup() {
     const container = ensureEnvironment();
 
+    const wordpressVersion = wp(container, ["core", "version"]).trim();
     const elementorVersion = wp(container, ["plugin", "get", "elementor", "--field=version"]).trim();
     const activePlugins = wp(container, ["plugin", "list", "--status=active", "--field=name"])
         .split("\n")
         .map((name) => name.trim())
         .filter(Boolean);
 
-    // Recorded because a previously green run can fail purely from an Elementor
-    // release, and that is the first thing to check when it does.
-    log(`Elementor ${elementorVersion}; active plugins: ${activePlugins.join(", ")}`);
+    // Recorded because a previously green run can fail purely from a WordPress or
+    // Elementor release, and that is the first thing to check when it does. The
+    // pre-release workflow also asserts on these, so that a leg meant to test
+    // trunk or a beta build cannot pass while quietly running stable.
+    log(`WordPress ${wordpressVersion}; Elementor ${elementorVersion}; active plugins: ${activePlugins.join(", ")}`);
 
     const activeTheme = wp(container, ["theme", "list", "--status=active", "--field=name"]).trim();
 
@@ -64,6 +67,7 @@ module.exports = async function globalSetup() {
         postId: Number(postId),
         permalink,
         httpStatus: response.status,
+        wordpressVersion,
         elementorVersion,
         activePlugins,
         baseUrl: BASE_URL,
