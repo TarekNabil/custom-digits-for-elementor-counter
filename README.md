@@ -1,21 +1,11 @@
 # Custom Digits for Elementor Counter
 
-**Current release** — WordPress and Elementor as users have them today
-
 [![Tests](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml)
 [![Plugin Check](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml)
 [![Smoke Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
 [![E2E Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml)
 [![codecov](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter/branch/main/graph/badge.svg)](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter)
 [![WordPress](https://img.shields.io/badge/WordPress-latest-0073aa?logo=wordpress&logoColor=white)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
-
-**Next release** — WordPress trunk and Elementor nightly, checked weekly
-
-[![nightly WordPress + Elementor](https://img.shields.io/github/actions/workflow/status/TarekNabil/custom-digits-for-elementor-counter/prerelease.yml?branch=main&event=schedule&label=nightly%20WordPress%20%2B%20Elementor)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/prerelease.yml)
-
-A red badge in the second group means an **unreleased** WordPress or Elementor broke
-something — not that the plugin is broken for anyone using it. The first group is
-what speaks to that.
 
 Display and animate Elementor's native **Counter** widget in any numeral system,
 by supplying your own set of ten digit characters.
@@ -277,11 +267,15 @@ WordPress by its `-alpha`/`-beta`/`-RC` marker, Elementor by comparing against t
 version wordpress.org currently ships. Without that, reusing an already-running
 environment would let a run pass while quietly testing current stable.
 
-A failure here **is** reported — red badge, and GitHub's failure email for the
-scheduled run — because the point of running it early is to find out. It simply is
-not a *required* check on `main`, so it never blocks a merge: current stable is what
-the other four workflows guard, and a break in an unreleased WordPress or Elementor
-is work to schedule, not a reason to stop shipping.
+A failure here **is** reported — the run goes red in the Actions tab and GitHub
+emails the failure for the scheduled run — because the point of running it early is
+to find out. There is deliberately **no badge for it above**: a red badge would read
+as "this plugin is broken" to anyone visiting, when no released version is affected.
+
+It is also not a *required* check on `main`, so it never blocks a merge. Current
+stable is what the badges and the other four workflows speak to; a break in an
+unreleased WordPress or Elementor is work to schedule, not a reason to stop
+shipping.
 
 Expect the occasional red run that is not your bug: in the days after an Elementor
 release, wordpress.org catches up with the nightly and the version comparison reads
