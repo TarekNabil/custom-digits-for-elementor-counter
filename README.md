@@ -20,7 +20,6 @@ are untouched.
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
-- [How it works](#how-it-works)
 - [Development](#development)
 - [License](#license)
 
@@ -67,9 +66,10 @@ rather than causing an error.
 3. Enter ten comma-separated characters, in order from zero to nine.
 4. Update the page. The counter renders and animates with those characters.
 
-### Ready-made digit sets
+### Example digit sets
 
-Copy any of these straight into the field:
+**Any** ten single characters work — these are just common ones, ready to copy
+straight into the field. Nothing here is a fixed list of what the plugin supports.
 
 | Numeral system | Used for | Value to paste | Renders as |
 | --- | --- | --- | --- |
@@ -90,32 +90,6 @@ malformed set can never produce a counter with some digits converted and others
 left Latin. A rejected value is outlined in red in the editor and simply ignored
 when the page renders, so the counter keeps its Latin digits.
 
-## How it works
-
-Conversion happens twice, on purpose: once on the server so the first paint is
-already correct, and again in the browser so Elementor's animation can't undo it.
-
-```
-PHP render         →  markup already contains ٧٨٦
-                      plus data-custom-digits-counter="yes"
-                      and  data-custom-digits-counter-map='["٠","١",…]'
-
-Elementor's JS     →  animates the number, writing Latin values
-Frontend script    →  MutationObserver re-converts each write
-```
-
-| File | Responsibility |
-| --- | --- |
-| [`custom-digits-for-elementor-counter.php`](custom-digits-for-elementor-counter.php) | Plugin header, constants, Elementor dependency check, bootstrap. |
-| [`includes/class-digits.php`](includes/class-digits.php) | Pure digit logic — parsing, validation, substitution. No WordPress or Elementor, which is what makes it directly testable. |
-| [`includes/class-plugin.php`](includes/class-plugin.php) | Registers the control and the render/asset hooks, reads widget settings, and injects the data attributes. Also clears Elementor's element cache when the plugin version changes, since Elementor otherwise serves stored markup without re-running the render filter. |
-| [`assets/js/custom-digits-counter.js`](assets/js/custom-digits-counter.js) | Frontend. Finds flagged counters, reads the digit map from the data attribute, and keeps the text converted through the count-up. |
-| [`assets/js/custom-digits-counter-editor.js`](assets/js/custom-digits-counter-editor.js) | Editor only. Mirrors the PHP validation so an invalid value is flagged as it's typed. The rules are passed from PHP to the script, so the two validators cannot drift apart. |
-| [`assets/css/custom-digits-counter-editor.css`](assets/css/custom-digits-counter-editor.css) | Editor only. The invalid-field state. |
-
-Note that `data-to-value` is deliberately left in Latin: the frontend script
-parses it to drive the animation, so converting it would double-convert.
-
 ## Development
 
 ```bash
@@ -131,26 +105,6 @@ npm install          # JS dev dependencies (Jest, Playwright, wp-env)
 | `npm test` | Jest over both browser scripts in jsdom. | no |
 | `npm run test:smoke` | Boots real WordPress + Elementor and checks the rendered markup. | yes |
 | `npm run test:e2e` | Playwright in Chromium, Firefox and WebKit, sampling the count-up as it animates. | yes |
-
-The first two need nothing but the dependencies above; run the other two before
-opening a pull request. GitHub Actions runs all four on every push to `main` and
-every pull request, each as a separate workflow. Test artifacts land under
-`tests/*/output/`, `playwright-report/` and `test-results/`, all gitignored.
-
-### Local WordPress environment
-
-[`.wp-env.json`](.wp-env.json) declares everything
-[`@wordpress/env`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/)
-needs — WordPress, Elementor, the Hello Elementor theme and this plugin — so
-`npm run env:start` is enough (`env:update` and `env:stop` alongside it).
-
-One footgun if you add a gitignored `.wp-env.override.json`: wp-env *replaces*
-arrays rather than merging them, so `"."` has to be repeated, and Elementor must
-stay before it so it loads before this addon.
-
-Plugin Check in CI runs against the **pruned** file set, reduced using
-[`.distignore`](.distignore) first, so it judges the plugin users receive rather
-than the repository.
 
 ## License
 
