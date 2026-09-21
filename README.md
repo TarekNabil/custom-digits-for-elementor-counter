@@ -139,27 +139,14 @@ every pull request, each as a separate workflow. Test artifacts land under
 
 ### Local WordPress environment
 
-[`.wp-env.json`](.wp-env.json) configures [`@wordpress/env`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/):
+[`.wp-env.json`](.wp-env.json) declares everything
+[`@wordpress/env`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/)
+needs — WordPress, Elementor, the Hello Elementor theme and this plugin — so
+`npm run env:start` is enough (`env:update` and `env:stop` alongside it).
 
-```bash
-npm run env:start     # start it
-npm run env:update    # restart, re-fetching the latest Elementor
-npm run env:stop      # stop it
-```
-
-That gives you WordPress with Elementor and the Hello Elementor theme from
-wordpress.org, and this plugin mounted and active. Both track the latest release,
-and wp-env caches each download, so you stay on the version you last fetched until
-`npm run env:update`.
-
-To pin a **specific** Elementor while reproducing a bug, put a versioned URL in a
-gitignored [`.wp-env.override.json`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/#wp-env-override-json).
-wp-env *replaces* arrays rather than merging them, so `"."` has to be repeated —
-and Elementor stays first, so it loads before this addon:
-
-```json
-{ "plugins": [ "https://downloads.wordpress.org/plugin/elementor.4.2.4.zip", "." ] }
-```
+One footgun if you add a gitignored `.wp-env.override.json`: wp-env *replaces*
+arrays rather than merging them, so `"."` has to be repeated, and Elementor must
+stay before it so it loads before this addon.
 
 Plugin Check in CI runs against the **pruned** file set, reduced using
 [`.distignore`](.distignore) first, so it judges the plugin users receive rather
