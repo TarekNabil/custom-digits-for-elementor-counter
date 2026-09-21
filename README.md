@@ -244,8 +244,9 @@ perfectly valid for Elementor can still break it — and the first run against a
 release would otherwise happen after users already have it.
 
 [Pre-release Test](.github/workflows/prerelease.yml) runs the smoke and e2e suites
-against the nightly builds of both, **weekly** rather than on push, since it is the
-upstream builds that change between runs and not this code:
+against the nightly builds of both — **weekly**, so an upstream change is caught
+even when nothing here changed, and on **every pull request**, so your own changes
+are checked against the nightlies before they merge:
 
 | | Source |
 | --- | --- |
@@ -257,8 +258,16 @@ resolve. Note that Elementor's `nightly` tracks `main`, which is further ahead t
 the next release — breakage shows up early, and occasionally for something that
 gets fixed before it ships.
 
-The run summary records the WordPress and Elementor versions it actually booted, so
-a green run says what it tested rather than leaving you to assume.
+The job checks that both nightlies actually took effect before trusting the result —
+WordPress by its `-alpha`/`-beta`/`-RC` marker, Elementor by comparing against the
+version wordpress.org currently ships. Without that, reusing an already-running
+environment would let a run pass while quietly testing current stable.
+
+It is **advisory**: the job is `continue-on-error`, so a break in an unreleased
+WordPress or Elementor reports neutral and never blocks a merge. Current stable is
+what the other four workflows guard. Expect an occasional neutral run in the days
+after an Elementor release, while wordpress.org catches up with the nightly's
+version.
 
 ## License
 
