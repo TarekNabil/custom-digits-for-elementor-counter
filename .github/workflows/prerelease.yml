@@ -75,8 +75,17 @@ jobs:
       # them, so "." has to be repeated or this plugin would not be installed at
       # all - and Elementor stays first, so it loads before its addon (PR #9).
       #
+      # The zip is extracted rather than handed to wp-env as a URL. wp-env names a
+      # plugin directory after the zip's filename, stripping only a trailing
+      # dot-numeric version (lib/config/parse-source-string.js): "elementor.zip"
+      # becomes "elementor", but "elementor-nightly.zip" becomes
+      # "elementor-nightly". That slug does not satisfy this plugin's
+      # `Requires Plugins: elementor` header, so WordPress refuses to activate it
+      # and wp-env start fails with "No plugins activated". The zip holds a single
+      # top-level elementor/ directory, so mounting that directly keeps the slug.
+      #
       # "nightly" is a rolling tag: the same URL always serves the newest build.
-      - name: Point Elementor at the nightly build
+      - name: Fetch and unpack the Elementor nightly
         run: |
           # Never silently replace someone's pinned versions. The file is
           # gitignored, so a CI checkout never has one; locally it very well may.
@@ -84,10 +93,22 @@ jobs:
             echo "refusing to overwrite an existing .wp-env.override.json" >&2
             exit 1
           fi
-          cat > .wp-env.override.json <<'JSON'
+
+          curl -fsSL --retry 3 -m 600 \
+            -o "${RUNNER_TEMP}/elementor-nightly.zip" \
+            https://github.com/elementor/elementor/releases/download/nightly/elementor-nightly.zip
+          unzip -q "${RUNNER_TEMP}/elementor-nightly.zip" -d "${RUNNER_TEMP}/nightly"
+
+          # If the archive layout ever changes, fail here with an obvious reason
+          # rather than during activation.
+          test -f "${RUNNER_TEMP}/nightly/elementor/elementor.php" \
+            || { echo "::error::nightly zip has no elementor/elementor.php"; exit 1; }
+          grep -m1 ' Version:' "${RUNNER_TEMP}/nightly/elementor/elementor.php"
+
+          cat > .wp-env.override.json <<JSON
           {
               "plugins": [
-                  "https://github.com/elementor/elementor/releases/download/nightly/elementor-nightly.zip",
+                  "${RUNNER_TEMP}/nightly/elementor",
                   "."
               ]
           }

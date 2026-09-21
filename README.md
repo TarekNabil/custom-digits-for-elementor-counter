@@ -251,10 +251,14 @@ are checked against the nightlies before they merge:
 | | Source |
 | --- | --- |
 | WordPress | [trunk nightly](https://wordpress.org/nightly-builds/wordpress-latest.zip), via `WP_ENV_CORE` |
-| Elementor | [`nightly` rolling release](https://github.com/elementor/elementor/releases/tag/nightly), via a generated `.wp-env.override.json` |
+| Elementor | [`nightly` rolling release](https://github.com/elementor/elementor/releases/tag/nightly), unpacked and mounted via a generated `.wp-env.override.json` |
 
 Both URLs are fixed and always serve the newest build, so there is nothing to
-resolve. Note that Elementor's `nightly` tracks `main`, which is further ahead than
+resolve. The Elementor zip is unpacked rather than passed to wp-env as a URL:
+wp-env names a plugin directory after the zip filename, so `elementor-nightly.zip`
+would install under the slug `elementor-nightly`, which does not satisfy this
+plugin's `Requires Plugins: elementor` header — WordPress would then refuse to
+activate it at all. Note that Elementor's `nightly` tracks `main`, which is further ahead than
 the next release — breakage shows up early, and occasionally for something that
 gets fixed before it ships.
 
