@@ -23,7 +23,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Nothing in this workflow runs an authenticated git command, so the
+          # token does not need to stay on disk where a dependency install
+          # script could read it.
+          persist-credentials: false
 
       # Plugin Check has no .distignore support, so reduce the checkout to the
       # files that actually ship before running it. Same rsync --exclude-from
@@ -41,6 +46,6 @@ jobs:
           find . -mindepth 1 -not -path './.git/*' -not -name '.git' | sed 's|^\./||' | sort
 
       - name: WordPress Plugin Check
-        uses: WordPress/plugin-check-action@v1.1.9
+        uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
         with:
           build-dir: './'

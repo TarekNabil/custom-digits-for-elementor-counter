@@ -1,0 +1,175 @@
+name: Pre-release Test
+
+# Every other workflow tests current stable WordPress and Elementor. This one runs
+# the same suites against the nightly builds of both, so a breaking upstream change
+# shows up before it reaches users.
+#
+# Runs on the schedule so upstream changes are caught even when nothing here
+# changes, and on pull requests so a change to this plugin is checked against the
+# nightlies before it merges.
+#
+# Deliberately not on push to main: the pull request has already tested the same
+# commit, and booting a cold environment again on merge would only repeat it.
+on:
+  schedule:
+    # Mondays, 04:17 UTC. Off the hour because scheduled jobs queue behind
+    # everything that picks :00.
+    - cron: '17 4 * * 1'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prerelease-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prerelease:
+    name: WordPress + Elementor nightly
+    runs-on: ubuntu-latest
+    # Advisory by design. A break in an unreleased WordPress or Elementor is not a
+    # defect in this plugin yet, and neither is an Elementor release day making the
+    # version check read equal. Current stable is covered by the other four
+    # workflows; this one reports neutral rather than red so it never blocks a merge.
+    continue-on-error: true
+    # Higher than the 20 minutes smoke and e2e use: the WordPress nightly zip alone
+    # is a ~61 MB cold download, on top of Docker images and three browsers.
+    timeout-minutes: 30
+
+    env:
+      # wp-env reads WP_ENV_CORE directly, so WordPress needs no config file.
+      WP_ENV_CORE: https://wordpress.org/nightly-builds/wordpress-latest.zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Nothing in this workflow runs an authenticated git command, so the
+          # token does not need to stay on disk where a dependency install
+          # script could read it.
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Report Docker version
+        run: |
+          docker --version
+          docker compose version
+
+      # There is no WP_ENV_PLUGINS, so Elementor can only be swapped through a
+      # config file. wp-env REPLACES arrays from an override rather than merging
+      # them, so "." has to be repeated or this plugin would not be installed at
+      # all - and Elementor stays first, so it loads before its addon (PR #9).
+      #
+      # The zip is extracted rather than handed to wp-env as a URL. wp-env names a
+      # plugin directory after the zip's filename, stripping only a trailing
+      # dot-numeric version (lib/config/parse-source-string.js): "elementor.zip"
+      # becomes "elementor", but "elementor-nightly.zip" becomes
+      # "elementor-nightly". That slug does not satisfy this plugin's
+      # `Requires Plugins: elementor` header, so WordPress refuses to activate it
+      # and wp-env start fails with "No plugins activated". The zip holds a single
+      # top-level elementor/ directory, so mounting that directly keeps the slug.
+      #
+      # "nightly" is a rolling tag: the same URL always serves the newest build.
+      - name: Fetch and unpack the Elementor nightly
+        run: |
+          # Never silently replace someone's pinned versions. The file is
+          # gitignored, so a CI checkout never has one; locally it very well may.
+          if [ -f .wp-env.override.json ]; then
+            echo "refusing to overwrite an existing .wp-env.override.json" >&2
+            exit 1
+          fi
+
+          curl -fsSL --retry 3 -m 600 \
+            -o "${RUNNER_TEMP}/elementor-nightly.zip" \
+            https://github.com/elementor/elementor/releases/download/nightly/elementor-nightly.zip
+          unzip -q "${RUNNER_TEMP}/elementor-nightly.zip" -d "${RUNNER_TEMP}/nightly"
+
+          # If the archive layout ever changes, fail here with an obvious reason
+          # rather than during activation.
+          test -f "${RUNNER_TEMP}/nightly/elementor/elementor.php" \
+            || { echo "::error::nightly zip has no elementor/elementor.php"; exit 1; }
+          grep -m1 ' Version:' "${RUNNER_TEMP}/nightly/elementor/elementor.php"
+
+          cat > .wp-env.override.json <<JSON
+          {
+              "plugins": [
+                  "${RUNNER_TEMP}/nightly/elementor",
+                  "."
+              ]
+          }
+          JSON
+          cat .wp-env.override.json
+
+      # Boot the environment here rather than letting whichever suite runs first
+      # do it. --update re-fetches the sources instead of trusting a cached zip,
+      # and because the suites reuse a running environment, this means one boot
+      # for the whole job under flags this workflow chose.
+      - name: Start wp-env with fresh sources
+        run: npx wp-env start --update
+
+      - name: Run smoke test
+        run: npm run test:smoke
+
+      # The smoke suite records the versions it actually booted. Assert on them
+      # before spending ten more minutes in three browsers: a green run that
+      # quietly tested current stable is the one outcome this workflow cannot
+      # tolerate, and `ensureEnvironment()` reusing an already-running environment
+      # is enough to cause it (tests/smoke/lib/environment.js).
+      #
+      # WordPress is checked by its version string, since a trunk build is marked
+      # "7.2-alpha-60123". Elementor's nightly carries an ordinary "4.4.0" with no
+      # such marker, so the only way to tell it from a release is to compare
+      # against what wordpress.org currently ships. `sort -V` does that ordering
+      # properly, where a string compare would rank 4.9.0 above 4.10.0.
+      - name: Verify the nightlies actually took effect
+        run: |
+          WP=$(node -p 'require("./tests/smoke/output/state.json").wordpressVersion')
+          EL=$(node -p 'require("./tests/smoke/output/state.json").elementorVersion')
+          echo "booted WordPress $WP, Elementor $EL"
+
+          case "$WP" in
+            *-alpha*|*-beta*|*-RC*) ;;
+            *) echo "::error::WordPress $WP is a release build — the nightly did not take effect"; exit 1 ;;
+          esac
+
+          STABLE=$(curl -fsS -m 30 "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information&request%5Bslug%5D=elementor" \
+            | node -p 'JSON.parse(require("fs").readFileSync(0,"utf8")).version') || {
+              echo "::warning::could not reach wordpress.org; skipped the Elementor check"; exit 0; }
+
+          # Equal versions are expected for a day or two after Elementor ships a
+          # release, while wordpress.org catches up with the nightly.
+          if [ "$EL" = "$STABLE" ] || [ "$(printf '%s\n%s\n' "$STABLE" "$EL" | sort -V | tail -1)" != "$EL" ]; then
+            echo "::error::Elementor $EL is not ahead of stable $STABLE — the override did not take effect"
+            exit 1
+          fi
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      - name: Upload artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: prerelease-output
+          path: |
+            tests/smoke/output/
+            tests/e2e/output/
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: warn
