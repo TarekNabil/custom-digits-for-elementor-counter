@@ -29,18 +29,12 @@ are untouched.
 
 - **Extends the widget you already use.** A **Custom Digits** section is added to
   the Counter widget's Content tab — no new widget, no migration.
-- **No flash of Latin numerals.** Digits are substituted server-side, so the
-  counter's very first paint already uses your characters.
-- **Converted throughout the count-up.** A `MutationObserver` keeps converting
-  while Elementor's animation rewrites the number, not just at the final value.
-- **Live validation in the editor.** The field turns red as you type whenever the
-  value isn't exactly ten single characters.
 - **Any characters, not just numerals.** Arabic-Indic, Devanagari, Thai — or
   arbitrary symbols, if that's what you want.
 - **Safe by default.** An empty or invalid value converts nothing, so existing
   counters are never altered unexpectedly.
 - **Works with late-rendered widgets** — popups, AJAX content and the editor
-  preview, via Elementor's `frontend/element_ready` hook.
+  preview.
 
 ## Requirements
 
