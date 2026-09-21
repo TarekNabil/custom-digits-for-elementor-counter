@@ -123,77 +123,19 @@ composer install     # PHP dev dependencies (PHPUnit)
 npm install          # JS dev dependencies (Jest, Playwright, wp-env)
 ```
 
-### Test suites
-
-Four layers, each answering a question the others cannot:
+### Tests
 
 | Command | Covers | Needs Docker |
 | --- | --- | --- |
-| `composer test` | 27 PHPUnit tests over the pure digit logic in `Digits` — parsing, validation, substitution. | no |
-| `npm test` | 39 Jest tests over both browser scripts in jsdom — editor validation, animation re-conversion, Elementor hook registration. | no |
-| `npm run test:smoke` | 28 Jest tests that boot real WordPress + Elementor and assert a rendered page actually shows custom digits. | yes |
-| `npm run test:e2e` | Playwright specs that load the page in real Chromium, Firefox and WebKit and watch the count-up animation live. | yes |
+| `composer test` | PHPUnit over the pure digit logic in [`Digits`](includes/class-digits.php) — parsing, validation, substitution. | no |
+| `npm test` | Jest over both browser scripts in jsdom. | no |
+| `npm run test:smoke` | Boots real WordPress + Elementor and checks the rendered markup. | yes |
+| `npm run test:e2e` | Playwright in Chromium, Firefox and WebKit, sampling the count-up as it animates. | yes |
 
-The first two are fast and need nothing installed beyond dependencies. Run them
-constantly; run the other two before opening a pull request.
-
-### Smoke test
-
-The unit suites exercise the pieces in isolation. The smoke test answers what
-they cannot: do the pieces work together inside real WordPress? It boots
-WordPress and Elementor via `wp-env`, publishes a page with two Counter widgets,
-requests it over HTTP, and asserts the markup:
-
-- the configured counter renders `٧٨٦`, not `786`
-- it carries `data-custom-digits-counter="yes"` and the JSON digit map
-- `data-to-value` stays Latin, so the frontend script can still parse it
-- a second counter with no digit set **keeps** Latin digits — the control that
-  catches code converting everything unconditionally
-- the frontend script is enqueued
-- `debug.log` holds no errors from this plugin
-
-```bash
-npm run test:smoke   # reuses the running environment, starting one if needed
-```
-
-It is a Jest suite ([`jest.smoke.config.js`](jest.smoke.config.js)), kept separate
-from `npm test` so the unit tests stay fast and need no Docker.
-`npm run test:smoke -- --verbose --reporters=default` lists each assertion, and
-`-t` filters as usual.
-
-Artifacts land in `tests/smoke/output/` (gitignored) — the fetched HTML, the
-captured `debug.log`, wp-env's log, and the run's `state.json`. That's the first
-place to look when an assertion fails.
-
-This is **not** an end-to-end test: the page is fetched, not executed, so it
-proves the scripts are *enqueued*, never that they *run*.
-
-### End-to-end test
-
-This suite closes that gap. It boots its own `wp-env` environment, loads the
-published page in real Chromium, Firefox and WebKit, and samples the counter
-element on every animation frame while Elementor's own JavaScript animates it:
-
-- the counter already shows custom digits on its first rendered frame, not just
-  once the animation settles
-- across the whole count-up (786 → 2025) every painted value is Arabic-Indic, and
-  no Latin digit is ever visible
-- the control counter (no digit set, 512 → 1999) stays Latin throughout
-- the frontend script raises no console errors
-
-Sampling uses `requestAnimationFrame` rather than a `MutationObserver` on
-purpose. Observer callbacks are microtasks, so a second observer would see the
-Latin value that exists between Elementor's write and this plugin's correction —
-a state the browser never paints. `requestAnimationFrame` runs after the
-microtask queue drains, so every sample is a value about to be shown.
-
-```bash
-npx playwright install --with-deps   # once, installs the three browsers
-npm run test:e2e
-```
-
-Artifacts (HTML report, traces, videos, wp-env log) land in `playwright-report/`,
-`test-results/` and `tests/e2e/output/` — all gitignored.
+The first two need nothing but the dependencies above; run the other two before
+opening a pull request. GitHub Actions runs all four on every push to `main` and
+every pull request, each as a separate workflow. Test artifacts land under
+`tests/*/output/`, `playwright-report/` and `test-results/`, all gitignored.
 
 ### Local WordPress environment
 
@@ -205,36 +147,23 @@ npm run env:update    # restart, re-fetching the latest Elementor
 npm run env:stop      # stop it
 ```
 
-That gives you a WordPress site with Elementor and the Hello Elementor theme
-installed from wordpress.org, and this plugin mounted and active.
+That gives you WordPress with Elementor and the Hello Elementor theme from
+wordpress.org, and this plugin mounted and active. Both track the latest release,
+and wp-env caches each download, so you stay on the version you last fetched until
+`npm run env:update`.
 
-Elementor and the theme track the latest wordpress.org releases, and wp-env
-caches each download — so you stay on the version you last fetched until
-`npm run env:update`. "Latest" refreshes deliberately, never silently.
-
-To pin a **specific** Elementor while reproducing a bug, put a versioned URL in
-an [`.wp-env.override.json`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/#wp-env-override-json)
-(gitignored). wp-env *replaces* arrays rather than merging them, so repeat `"."`:
+To pin a **specific** Elementor while reproducing a bug, put a versioned URL in a
+gitignored [`.wp-env.override.json`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/#wp-env-override-json).
+wp-env *replaces* arrays rather than merging them, so `"."` has to be repeated —
+and Elementor stays first, so it loads before this addon:
 
 ```json
-{ "plugins": [ ".", "https://downloads.wordpress.org/plugin/elementor.4.2.4.zip" ] }
+{ "plugins": [ "https://downloads.wordpress.org/plugin/elementor.4.2.4.zip", "." ] }
 ```
 
-### Continuous integration
-
-Four independent workflows run on every push to `main` and every pull request, so
-a failure in one never masks another:
-
-| Workflow | What it answers |
-| --- | --- |
-| [Tests](.github/workflows/tests.yml) | Do the units pass on PHP 7.4 – 8.5, and in jsdom? Uploads coverage to Codecov. |
-| [Plugin Check](.github/workflows/plugin-check.yml) | Is the distributable zip publishable to wordpress.org? |
-| [Smoke Test](.github/workflows/smoke.yml) | Does it work inside real WordPress + Elementor? |
-| [E2E Test](.github/workflows/e2e.yml) | Does it work in a real browser, mid-animation? |
-
-Plugin Check runs against the **pruned** file set — the checkout is reduced using
-[`.distignore`](.distignore) first, so CI judges the plugin users actually
-receive rather than the repository.
+Plugin Check in CI runs against the **pruned** file set, reduced using
+[`.distignore`](.distignore) first, so it judges the plugin users receive rather
+than the repository.
 
 ## License
 
