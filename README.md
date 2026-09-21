@@ -4,6 +4,7 @@
 [![Plugin Check](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml)
 [![Smoke Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
 [![E2E Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml)
+[![Pre-release Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/prerelease.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/prerelease.yml)
 [![codecov](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter/branch/main/graph/badge.svg)](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter)
 [![WordPress](https://img.shields.io/badge/WordPress-latest-0073aa?logo=wordpress&logoColor=white)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
 
@@ -267,11 +268,15 @@ WordPress by its `-alpha`/`-beta`/`-RC` marker, Elementor by comparing against t
 version wordpress.org currently ships. Without that, reusing an already-running
 environment would let a run pass while quietly testing current stable.
 
-It is **advisory**: the job is `continue-on-error`, so a break in an unreleased
-WordPress or Elementor reports neutral and never blocks a merge. Current stable is
-what the other four workflows guard. Expect an occasional neutral run in the days
-after an Elementor release, while wordpress.org catches up with the nightly's
-version.
+A failure here **is** reported — red badge, and GitHub's failure email for the
+scheduled run — because the point of running it early is to find out. It simply is
+not a *required* check on `main`, so it never blocks a merge: current stable is what
+the other four workflows guard, and a break in an unreleased WordPress or Elementor
+is work to schedule, not a reason to stop shipping.
+
+Expect the occasional red run that is not your bug: in the days after an Elementor
+release, wordpress.org catches up with the nightly and the version comparison reads
+equal.
 
 ## License
 
