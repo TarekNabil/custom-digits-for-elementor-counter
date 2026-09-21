@@ -1,12 +1,21 @@
 # Custom Digits for Elementor Counter
 
+**Current release** — WordPress and Elementor as users have them today
+
 [![Tests](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/tests.yml)
 [![Plugin Check](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/plugin-check.yml)
 [![Smoke Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
 [![E2E Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml)
-[![Pre-release Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/prerelease.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/prerelease.yml)
 [![codecov](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter/branch/main/graph/badge.svg)](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter)
 [![WordPress](https://img.shields.io/badge/WordPress-latest-0073aa?logo=wordpress&logoColor=white)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
+
+**Next release** — WordPress trunk and Elementor nightly, checked weekly
+
+[![nightly WordPress + Elementor](https://img.shields.io/github/actions/workflow/status/TarekNabil/custom-digits-for-elementor-counter/prerelease.yml?branch=main&event=schedule&label=nightly%20WordPress%20%2B%20Elementor)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/prerelease.yml)
+
+A red badge in the second group means an **unreleased** WordPress or Elementor broke
+something — not that the plugin is broken for anyone using it. The first group is
+what speaks to that.
 
 Display and animate Elementor's native **Counter** widget in any numeral system,
 by supplying your own set of ten digit characters.
