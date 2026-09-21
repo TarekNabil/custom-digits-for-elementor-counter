@@ -236,51 +236,6 @@ Plugin Check runs against the **pruned** file set — the checkout is reduced us
 [`.distignore`](.distignore) first, so CI judges the plugin users actually
 receive rather than the repository.
 
-### Testing upcoming releases
-
-Those four all test **current stable**. This plugin reads Elementor's counter
-markup with a regex and hooks its render attributes, so a release that is
-perfectly valid for Elementor can still break it — and the first run against a new
-release would otherwise happen after users already have it.
-
-[Pre-release Test](.github/workflows/prerelease.yml) runs the smoke and e2e suites
-against the nightly builds of both — **weekly**, so an upstream change is caught
-even when nothing here changed, and on **every pull request**, so your own changes
-are checked against the nightlies before they merge:
-
-| | Source |
-| --- | --- |
-| WordPress | [trunk nightly](https://wordpress.org/nightly-builds/wordpress-latest.zip), via `WP_ENV_CORE` |
-| Elementor | [`nightly` rolling release](https://github.com/elementor/elementor/releases/tag/nightly), unpacked and mounted via a generated `.wp-env.override.json` |
-
-Both URLs are fixed and always serve the newest build, so there is nothing to
-resolve. The Elementor zip is unpacked rather than passed to wp-env as a URL:
-wp-env names a plugin directory after the zip filename, so `elementor-nightly.zip`
-would install under the slug `elementor-nightly`, which does not satisfy this
-plugin's `Requires Plugins: elementor` header — WordPress would then refuse to
-activate it at all. Note that Elementor's `nightly` tracks `main`, which is further ahead than
-the next release — breakage shows up early, and occasionally for something that
-gets fixed before it ships.
-
-The job checks that both nightlies actually took effect before trusting the result —
-WordPress by its `-alpha`/`-beta`/`-RC` marker, Elementor by comparing against the
-version wordpress.org currently ships. Without that, reusing an already-running
-environment would let a run pass while quietly testing current stable.
-
-A failure here **is** reported — the run goes red in the Actions tab and GitHub
-emails the failure for the scheduled run — because the point of running it early is
-to find out. There is deliberately **no badge for it above**: a red badge would read
-as "this plugin is broken" to anyone visiting, when no released version is affected.
-
-It is also not a *required* check on `main`, so it never blocks a merge. Current
-stable is what the badges and the other four workflows speak to; a break in an
-unreleased WordPress or Elementor is work to schedule, not a reason to stop
-shipping.
-
-Expect the occasional red run that is not your bug: in the days after an Elementor
-release, wordpress.org catches up with the nightly and the version comparison reads
-equal.
-
 ## License
 
 [GPL-3.0-or-later](LICENSE) — see <https://www.gnu.org/licenses/gpl-3.0.html>
