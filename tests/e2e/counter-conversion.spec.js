@@ -44,6 +44,7 @@ async function installRecorder(page) {
             window.__cdc.changedAt[key] = 0;
         }
 
+        /** Records each counter value that is about to be painted. */
         function sample() {
             const elements = keys.map((key) => document.querySelector(selectors[key]));
 

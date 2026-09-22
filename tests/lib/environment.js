@@ -36,6 +36,7 @@ function forSuite(suite) {
     const PAGE_FILE = path.join(OUT_DIR, "page.html");
     const CONTAINER_SUITE = `${PLUGIN_DESTINATION}/tests/${suite}`;
 
+    /** Appends a message to this suite's wp-env log. */
     function log(message) {
         fs.mkdirSync(OUT_DIR, { recursive: true });
         fs.appendFileSync(LOG_FILE, `${message}\n`);
@@ -113,6 +114,7 @@ function forSuite(suite) {
         return null;
     }
 
+    /** Reports whether wp-cli responds in the selected container. */
     function cliAnswers(container) {
         try {
             wp(container, ["--info"]);
@@ -221,11 +223,13 @@ function forSuite(suite) {
         return { postId: Number(postId), permalink };
     }
 
+    /** Persists state for this suite's tests and teardown. */
     function writeState(state) {
         fs.mkdirSync(OUT_DIR, { recursive: true });
         fs.writeFileSync(STATE_FILE, `${JSON.stringify(state, null, 4)}\n`);
     }
 
+    /** Reads state written by this suite's global setup. */
     function readState() {
         if (!fs.existsSync(STATE_FILE)) {
             throw new Error(`${STATE_FILE} is missing — the ${suite} global setup did not complete.`);
