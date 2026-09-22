@@ -1,14 +1,18 @@
 <?php
 /**
- * Creates the smoke-test page from the Elementor fixture.
+ * Creates the test page from the Elementor fixture, for whichever suite asks.
  *
- * Run inside the wp-env container via `wp eval-file`. Echoes the new post id and
- * its permalink for the calling script to pick up.
+ * Run inside the wp-env container via `wp eval-file <file> <title>`: wp-cli puts
+ * the trailing arguments in $args, so the suites share this file and differ only
+ * by the page title they pass. Echoes the new post id and its permalink for the
+ * calling script to pick up.
  *
  * @package CustomDigitsForElementorCounter
  */
 
-$fixture = __DIR__ . '/fixtures/counter-page.json';
+$title = isset( $args[0] ) ? (string) $args[0] : 'Custom Digits test';
+
+$fixture = __DIR__ . '/counter-page.json';
 $data    = file_get_contents( $fixture );
 
 if ( false === $data || null === json_decode( $data, true ) ) {
@@ -18,7 +22,7 @@ if ( false === $data || null === json_decode( $data, true ) ) {
 
 $post_id = wp_insert_post(
 	[
-		'post_title'   => 'Custom Digits smoke test',
+		'post_title'   => $title,
 		'post_status'  => 'publish',
 		'post_type'    => 'page',
 		'post_content' => '',

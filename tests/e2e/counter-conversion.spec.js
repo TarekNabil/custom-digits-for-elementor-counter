@@ -7,6 +7,10 @@
  * the real page in a real browser and watches every DOM mutation Elementor's
  * own counter animation produces, to prove a Latin digit never flashes through
  * mid-animation — not just that the resting value ends up right.
+ *
+ * The two widgets are asserted by one parameterised test: what makes them
+ * different is data (the expected values and the allowed character set), which
+ * tests/lib/fixture.js holds for this suite and the smoke suite alike.
  */
 
 "use strict";
@@ -14,22 +18,9 @@
 const { test, expect } = require("@playwright/test");
 
 const { readState } = require("./lib/environment");
+const { WIDGETS, digitsOnly, selectorFor } = require("../lib/fixture");
 
-const WIDGET_A_SELECTOR = '.elementor-counter-number[data-custom-digits-counter="yes"]';
-const WIDGET_B_SELECTOR = '.elementor-counter-number[data-custom-digits-counter="no"]';
-
-// Elementor formats the counter with its `data-delimiter` setting, so a rendered
-// value is "٢,٠٢٥" rather than "٢٠٢٥". The digit characters are what this suite
-// is about, so the delimiter is permitted in the patterns and stripped before
-// comparing against an expected number.
-const ARABIC_INDIC_ONLY = /^[٠-٩,.\s]+$/;
-const HAS_LATIN_DIGIT = /[0-9]/;
-const LATIN_ONLY = /^[0-9,.\s]+$/;
-
-/** Removes group separators so a sample can be compared to a plain number. */
-function digitsOnly(value) {
-    return value.replace(/[,.\s]/g, "");
-}
+const SELECTORS = Object.fromEntries(WIDGETS.map((widget) => [widget.key, selectorFor(widget)]));
 
 /**
  * Installs a per-frame sampler before any page script runs, so it captures the
@@ -43,82 +34,80 @@ function digitsOnly(value) {
  * painted, which is what "no Latin digit is ever visible" actually means.
  */
 async function installRecorder(page) {
-    await page.addInitScript(
-        ({ selectorA, selectorB }) => {
-            window.__cdc = { a: [], b: [], aChangedAt: 0, bChangedAt: 0 };
+    await page.addInitScript((selectors) => {
+        const keys = Object.keys(selectors);
 
-            function record(key, element) {
-                const value = element.textContent;
-                const samples = window.__cdc[key];
+        window.__cdc = { samples: {}, changedAt: {} };
 
-                // Only changes are interesting: a sample per frame for a
-                // two-second animation would be a hundred identical strings,
-                // and `length > 1` should mean "the value moved".
-                if (samples.length === 0 || samples[samples.length - 1] !== value) {
-                    samples.push(value);
-                    window.__cdc[key + "ChangedAt"] = Date.now();
-                }
-            }
+        for (const key of keys) {
+            window.__cdc.samples[key] = [];
+            window.__cdc.changedAt[key] = 0;
+        }
 
-            function sample() {
-                const a = document.querySelector(selectorA);
-                const b = document.querySelector(selectorB);
+        /** Records each counter value that is about to be painted. */
+        function sample() {
+            const elements = keys.map((key) => document.querySelector(selectors[key]));
 
-                if (a && b) {
-                    record("a", a);
-                    record("b", b);
-                }
+            // All or nothing: a half-rendered page would otherwise start one
+            // counter's sample list at a value the other never saw.
+            if (elements.every(Boolean)) {
+                keys.forEach((key, index) => {
+                    const value = elements[index].textContent;
+                    const samples = window.__cdc.samples[key];
 
-                requestAnimationFrame(sample);
+                    // Only changes are interesting: a sample per frame for a
+                    // two-second animation would be a hundred identical strings,
+                    // and `length > 1` should mean "the value moved".
+                    if (samples.length === 0 || samples[samples.length - 1] !== value) {
+                        samples.push(value);
+                        window.__cdc.changedAt[key] = Date.now();
+                    }
+                });
             }
 
             requestAnimationFrame(sample);
-        },
-        { selectorA: WIDGET_A_SELECTOR, selectorB: WIDGET_B_SELECTOR }
-    );
-}
+        }
 
-/** Waits until both counters have gone quiet, i.e. the count-up finished. */
-async function waitForSettled(page) {
-    await page.waitForFunction(
-        () => {
-            const now = Date.now();
-            return (
-                window.__cdc.a.length > 0 &&
-                window.__cdc.b.length > 0 &&
-                now - window.__cdc.aChangedAt > 500 &&
-                now - window.__cdc.bChangedAt > 500
-            );
-        },
-        { timeout: 15000 }
-    );
-
-    return page.evaluate(() => window.__cdc);
+        requestAnimationFrame(sample);
+    }, SELECTORS);
 }
 
 /**
- * Navigates to the fixture page and returns the recorded samples once the
- * count-up has finished.
+ * Navigates to the fixture page and returns the recorded samples, keyed by
+ * widget, once every count-up has gone quiet.
  *
  * Elementor only starts the count-up once the widget is visible, so this
- * scrolls widget B (the lower of the two, stacked in the same column) into
- * view — otherwise a taller theme header could leave both counters below the
+ * scrolls the last widget (the lowest of the stack, all in one column) into
+ * view — otherwise a taller theme header could leave the counters below the
  * fold and the animation would never trigger.
  */
 async function loadAndSettle(page, permalink) {
     await installRecorder(page);
     await page.goto(permalink);
 
-    // Assert both counters exist before waiting for them to settle. The sampler
-    // records nothing until it finds both, so without this a missing element
+    // Assert every counter exists before waiting for them to settle. The sampler
+    // records nothing until it finds them all, so without this a missing element
     // surfaces as an opaque 15s settle timeout rather than "widget A is not
     // flagged" — which is exactly what a broken digit set looks like.
-    await expect(page.locator(WIDGET_A_SELECTOR)).toHaveCount(1);
-    await expect(page.locator(WIDGET_B_SELECTOR)).toHaveCount(1);
+    for (const selector of Object.values(SELECTORS)) {
+        await expect(page.locator(selector)).toHaveCount(1);
+    }
 
-    await page.locator(WIDGET_B_SELECTOR).scrollIntoViewIfNeeded();
+    await page.locator(Object.values(SELECTORS).pop()).scrollIntoViewIfNeeded();
 
-    return waitForSettled(page);
+    await page.waitForFunction(
+        (keys) => {
+            const now = Date.now();
+
+            return keys.every(
+                (key) => window.__cdc.samples[key].length > 0 && now - window.__cdc.changedAt[key] > 500
+            );
+        },
+        Object.keys(SELECTORS),
+        { timeout: 15000 }
+    );
+
+    return page.evaluate(() => window.__cdc.samples);
 }
 
 test.describe("counter digit conversion", () => {
@@ -128,37 +117,25 @@ test.describe("counter digit conversion", () => {
         ({ permalink } = readState());
     });
 
-    test("widget A: shows custom digits on first paint, and never flashes Latin digits during the count-up", async ({
-        page,
-    }) => {
-        const samples = await loadAndSettle(page, permalink);
+    for (const widget of WIDGETS) {
+        test(`${widget.label}: renders its own digits on first paint and never flashes another set during the count-up`, async ({
+            page,
+        }) => {
+            const samples = (await loadAndSettle(page, permalink))[widget.key];
 
-        expect(samples.a[0]).toBe("٧٨٦");
+            expect(samples[0]).toBe(widget.first);
 
-        // More than one sample proves the animation actually ran and was
-        // observed, not just that the resting value happens to be right.
-        expect(samples.a.length).toBeGreaterThan(1);
+            // More than one sample proves the animation actually ran and was
+            // observed, not just that the resting value happens to be right.
+            expect(samples.length).toBeGreaterThan(1);
 
-        for (const value of samples.a) {
-            expect(value).toMatch(ARABIC_INDIC_ONLY);
-            expect(value).not.toMatch(HAS_LATIN_DIGIT);
-        }
+            for (const value of samples) {
+                expect(value).toMatch(widget.allowed);
+            }
 
-        expect(digitsOnly(samples.a[samples.a.length - 1])).toBe("٢٠٢٥");
-    });
-
-    test("widget B (control): keeps Latin digits throughout, unaffected by the conversion", async ({ page }) => {
-        const samples = await loadAndSettle(page, permalink);
-
-        expect(samples.b[0]).toBe("512");
-        expect(samples.b.length).toBeGreaterThan(1);
-
-        for (const value of samples.b) {
-            expect(value).toMatch(LATIN_ONLY);
-        }
-
-        expect(digitsOnly(samples.b[samples.b.length - 1])).toBe("1999");
-    });
+            expect(digitsOnly(samples[samples.length - 1])).toBe(widget.last);
+        });
+    }
 
     test("the frontend script raises no console errors", async ({ page }) => {
         const errors = [];

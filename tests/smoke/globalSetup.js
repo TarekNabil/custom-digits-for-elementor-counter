@@ -14,9 +14,11 @@ const path = require("path");
 
 const {
     BASE_URL,
-    CONTAINER_SMOKE,
+    CONTAINER_SUITE,
     PAGE_FILE,
+    createPage,
     ensureEnvironment,
+    ensureTheme,
     log,
     wp,
     writeState,
@@ -38,23 +40,12 @@ module.exports = async function globalSetup() {
     // trunk or a beta build cannot pass while quietly running stable.
     log(`WordPress ${wordpressVersion}; Elementor ${elementorVersion}; active plugins: ${activePlugins.join(", ")}`);
 
-    const activeTheme = wp(container, ["theme", "list", "--status=active", "--field=name"]).trim();
-
-    if (activeTheme !== "hello-elementor") {
-        log(`activating hello-elementor (was ${activeTheme || "none"})`);
-        wp(container, ["theme", "activate", "hello-elementor"]);
-    }
+    ensureTheme(container);
 
     // Only errors this run produced should be reported.
-    wp(container, ["eval-file", `${CONTAINER_SMOKE}/truncate-log.php`]);
+    wp(container, ["eval-file", `${CONTAINER_SUITE}/truncate-log.php`]);
 
-    const created = wp(container, ["eval-file", `${CONTAINER_SMOKE}/create-page.php`]);
-    const postId = (created.match(/^POSTID (\d+)$/m) || [])[1];
-    const permalink = (created.match(/^PERMALINK (\S+)$/m) || [])[1];
-
-    if (!postId || !permalink) {
-        throw new Error(`could not create the smoke page:\n${created}`);
-    }
+    const { postId, permalink } = createPage(container, "Custom Digits smoke test");
 
     const response = await fetch(permalink);
     const html = await response.text();
@@ -64,7 +55,7 @@ module.exports = async function globalSetup() {
 
     writeState({
         container,
-        postId: Number(postId),
+        postId,
         permalink,
         httpStatus: response.status,
         wordpressVersion,

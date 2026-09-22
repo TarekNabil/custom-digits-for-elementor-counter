@@ -7,14 +7,16 @@
  * visitor would receive.
  *
  * Not an end-to-end test: the page is fetched, not executed, so this proves the
- * scripts are enqueued, never that they run. That gap needs a browser.
+ * scripts are enqueued, never that they run. That gap needs a browser, and
+ * tests/e2e covers it against the same fixture.
  */
 
 "use strict";
 
 const fs = require("fs");
 
-const { CONTAINER_SMOKE, PAGE_FILE, PLUGIN_SLUG, readState, wp } = require("./lib/environment");
+const { CONTAINER_SUITE, PAGE_FILE, PLUGIN_SLUG, readState, wp } = require("./lib/environment");
+const { WIDGETS } = require("../lib/fixture");
 
 const state = readState();
 const html = fs.readFileSync(PAGE_FILE, "utf8");
@@ -36,9 +38,6 @@ function counterElements(markup) {
 
 const counters = counterElements(html);
 
-// Fixture order: widget A carries the digit set, widget B is the control.
-const [widgetA, widgetB] = counters;
-
 describe("environment", () => {
     test("the page was served successfully", () => {
         expect(state.httpStatus).toBe(200);
@@ -56,7 +55,7 @@ describe("environment", () => {
 describe("boot", () => {
     // boot-assertions.php runs inside WordPress, where it can see loaded classes
     // and the hook registry, and prints one PASS/FAIL line per check.
-    const results = wp(state.container, ["eval-file", `${CONTAINER_SMOKE}/boot-assertions.php`])
+    const results = wp(state.container, ["eval-file", `${CONTAINER_SUITE}/boot-assertions.php`])
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean)
@@ -76,44 +75,51 @@ describe("boot", () => {
 // while data-to-value must stay Latin for the frontend script to parse.
 // Assertions match ">value</span>" rather than the value anywhere, which would
 // also match the attributes and pass for the wrong reason.
-describe("widget A: a valid digit set (starts at 786)", () => {
-    test("both counters were rendered", () => {
-        expect(counters).toHaveLength(2);
+describe("rendered counters", () => {
+    test("every fixture widget was rendered", () => {
+        expect(counters).toHaveLength(WIDGETS.length);
     });
 
-    test("renders converted digits", () => {
-        expect(widgetA.text).toBe("٧٨٦");
-    });
+    // Fixture order is document order, so the widgets line up with the markup.
+    describe.each(WIDGETS.map((widget, index) => [widget.label, widget, index]))(
+        "%s",
+        (_label, widget, index) => {
+            const counter = () => counters[index];
 
-    test("carries the enabled flag", () => {
-        expect(widgetA.tag).toContain('data-custom-digits-counter="yes"');
-    });
+            test("renders its first value", () => {
+                expect(counter().text).toBe(widget.first);
+            });
 
-    test("carries the digit map", () => {
+            test("carries the conversion flag", () => {
+                expect(counter().tag).toContain(`data-custom-digits-counter="${widget.enabled}"`);
+            });
+
+            test("leaves data-to-value in Latin for the frontend script", () => {
+                // Converting it here would make the animation double-convert.
+                expect(counter().tag).toContain(`data-to-value="${widget.target}"`);
+            });
+        }
+    );
+});
+
+// Only the widget that carries a digit set ships a map; the control must not,
+// or code that converted everything unconditionally would still pass above.
+describe("widget A: the digit map", () => {
+    const widgetA = counters[0];
+    const widgetB = counters[1];
+
+    test("is attached to the converting widget", () => {
         expect(widgetA.tag).toContain("data-custom-digits-counter-map=");
     });
 
-    test("digit map includes the tenth digit", () => {
+    test("includes the tenth digit", () => {
         // wp_json_encode escapes non-ASCII by default; accept either form so a
         // change in encoding is not reported as a conversion failure.
         expect(widgetA.tag).toMatch(/\\u0669|٩/);
     });
 
-    test("leaves data-to-value in Latin for the frontend script", () => {
-        // Converting it here would make the animation double-convert.
-        expect(widgetA.tag).toContain('data-to-value="2025"');
-    });
-});
-
-// Without this control, code that converted everything unconditionally would
-// satisfy every assertion above.
-describe("widget B: no digit set, the control (starts at 512)", () => {
-    test("keeps Latin digits", () => {
-        expect(widgetB.text).toBe("512");
-    });
-
-    test("carries the disabled flag", () => {
-        expect(widgetB.tag).toContain('data-custom-digits-counter="no"');
+    test("is absent from the control widget", () => {
+        expect(widgetB.tag).not.toContain("data-custom-digits-counter-map=");
     });
 });
 
@@ -127,7 +133,7 @@ describe("assets", () => {
 
 describe("php error log", () => {
     test("records no errors from this plugin", () => {
-        const logContents = wp(state.container, ["eval-file", `${CONTAINER_SMOKE}/read-log.php`]);
+        const logContents = wp(state.container, ["eval-file", `${CONTAINER_SUITE}/read-log.php`]);
 
         // Scoped to this plugin: unrelated core and Elementor notices must not
         // fail the run.
