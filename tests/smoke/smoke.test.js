@@ -1,14 +1,18 @@
 /**
- * Smoke test: does the plugin work inside real WordPress with real Elementor?
+ * Smoke test: does the plugin boot inside real WordPress with real Elementor,
+ * and does the server send converted digits?
  *
- * The unit suites (composer test, npm test) exercise the pieces in isolation.
- * This one answers what they cannot — whether the pieces fit together — by
- * booting a real site, rendering a Counter widget and reading the HTML that a
- * visitor would receive.
+ * Deliberately narrow. The page is fetched, not executed, so this suite can
+ * only read what the server produced. Everything about what the page then
+ * *does* — the count-up animation, the control widget staying Latin, the
+ * script actually running — belongs to tests/e2e, which drives real browsers
+ * against the same fixture and is strictly stronger for anything rendered.
  *
- * Not an end-to-end test: the page is fetched, not executed, so this proves the
- * scripts are enqueued, never that they run. That gap needs a browser, and
- * tests/e2e covers it against the same fixture.
+ * What is left here is what a browser cannot see: that the classes loaded, the
+ * hooks registered, no PHP error was raised, and the markup left the server
+ * already converted. That last one looks like something e2e covers, and does
+ * not: e2e's first sample is taken after the frontend script has run, so it
+ * cannot tell a server-side conversion from a fast client-side one.
  */
 
 "use strict";
@@ -22,21 +26,21 @@ const state = readState();
 const html = fs.readFileSync(PAGE_FILE, "utf8");
 
 /**
- * Pulls out Elementor's counter number elements, in document order.
+ * Pulls out the text of Elementor's counter number elements, in document order.
  *
  * Asserting against the whole page would work, but a failure then prints the
  * entire document. Comparing the element's text directly reports
  * `Expected "٧٨٦" / Received "786"`, which names the actual problem.
  */
-function counterElements(markup) {
+function counterValues(markup) {
     const pattern = /<span[^>]*\bclass="[^"]*\belementor-counter-number\b[^"]*"[^>]*>([^<]*)<\/span>/g;
 
     return [...markup.matchAll(pattern)]
         .filter((match) => !/elementor-counter-number-(prefix|suffix)/.test(match[0]))
-        .map((match) => ({ tag: match[0], text: match[1] }));
+        .map((match) => match[1]);
 }
 
-const counters = counterElements(html);
+const counters = counterValues(html);
 
 describe("environment", () => {
     test("the page was served successfully", () => {
@@ -71,64 +75,22 @@ describe("boot", () => {
 });
 
 // Elementor renders starting_number as the element's text and animates up to
-// data-to-value in JavaScript. So server-side conversion is visible in the text,
-// while data-to-value must stay Latin for the frontend script to parse.
-// Assertions match ">value</span>" rather than the value anywhere, which would
-// also match the attributes and pass for the wrong reason.
-describe("rendered counters", () => {
+// data-to-value in JavaScript, so this first value is the only one the server
+// converts — and the only conversion a plain fetch can observe.
+describe("server-rendered digits", () => {
     test("every fixture widget was rendered", () => {
         expect(counters).toHaveLength(WIDGETS.length);
     });
 
     // Fixture order is document order, so the widgets line up with the markup.
-    describe.each(WIDGETS.map((widget, index) => [widget.label, widget, index]))(
-        "%s",
+    // Widget B is the control: without it, code that converted every counter
+    // unconditionally would satisfy the assertion above it.
+    test.each(WIDGETS.map((widget, index) => [widget.label, widget, index]))(
+        "%s renders its first value",
         (_label, widget, index) => {
-            const counter = () => counters[index];
-
-            test("renders its first value", () => {
-                expect(counter().text).toBe(widget.first);
-            });
-
-            test("carries the conversion flag", () => {
-                expect(counter().tag).toContain(`data-custom-digits-counter="${widget.enabled}"`);
-            });
-
-            test("leaves data-to-value in Latin for the frontend script", () => {
-                // Converting it here would make the animation double-convert.
-                expect(counter().tag).toContain(`data-to-value="${widget.target}"`);
-            });
+            expect(counters[index]).toBe(widget.first);
         }
     );
-});
-
-// Only the widget that carries a digit set ships a map; the control must not,
-// or code that converted everything unconditionally would still pass above.
-describe("widget A: the digit map", () => {
-    const widgetA = counters[0];
-    const widgetB = counters[1];
-
-    test("is attached to the converting widget", () => {
-        expect(widgetA.tag).toContain("data-custom-digits-counter-map=");
-    });
-
-    test("includes the tenth digit", () => {
-        // wp_json_encode escapes non-ASCII by default; accept either form so a
-        // change in encoding is not reported as a conversion failure.
-        expect(widgetA.tag).toMatch(/\\u0669|٩/);
-    });
-
-    test("is absent from the control widget", () => {
-        expect(widgetB.tag).not.toContain("data-custom-digits-counter-map=");
-    });
-});
-
-describe("assets", () => {
-    test("the frontend script is enqueued", () => {
-        // Proves register_assets() and enqueue_script() ran and the
-        // elementor-frontend dependency resolved.
-        expect(html).toContain("assets/js/custom-digits-counter.js");
-    });
 });
 
 describe("php error log", () => {

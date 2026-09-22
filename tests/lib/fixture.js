@@ -23,9 +23,9 @@ const WIDGETS = [
         // up to data-to-value in JavaScript, so the first value is the only one
         // the server converts.
         first: "٧٨٦",
+        // Reaching this also proves data-to-value stayed Latin: Elementor
+        // cannot parse a converted target, so the count-up would never arrive.
         last: "٢٠٢٥",
-        // data-to-value must stay Latin for the frontend script to parse.
-        target: "2025",
         // Anchored, and with no 0-9 in the class, so matching this already
         // proves no Latin digit is present. Elementor formats the animated
         // value with its `data-delimiter` setting ("٢,٠٢٥" rather than "٢٠٢٥"),
@@ -38,7 +38,6 @@ const WIDGETS = [
         enabled: "no",
         first: "512",
         last: "1999",
-        target: "1999",
         allowed: /^[0-9,.\s]+$/,
     },
 ];

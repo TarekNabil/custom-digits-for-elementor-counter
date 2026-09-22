@@ -84,14 +84,48 @@ This is a WordPress plugin that extends Elementor's native Counter widget to sup
 - Test both Latin and Arabic-Indic formats; verify animations work correctly.
 - Test with different browser versions (especially for MutationObserver support).
 
+#### Which suite owns what
+
+Each suite answers one question. Keeping to this is what stops the same
+assertion accumulating in three places — add a new check to the suite that owns
+the question, not to whichever suite is easiest to extend.
+
+| Suite | Command | Owns |
+| --- | --- | --- |
+| PHPUnit (`tests/`) | `composer test` | PHP units — parsing and converting digit sets, no WordPress |
+| Jest (`tests/js/`) | `npm test` | Frontend script logic in jsdom — the refusal branches, the observer, the Elementor hooks |
+| Smoke (`tests/smoke/`) | `npm run test:smoke` | Does it boot inside real WordPress: classes, hooks, no PHP errors, and that the **server** sent converted digits |
+| E2E (`tests/e2e/`) | `npm run test:e2e` | What the page actually does in real browsers: the count-up, no Latin flash, the control widget |
+
+Smoke deliberately does **not** assert on render attributes or the enqueued
+script. E2E proves those functionally, and proves them more strongly, because it
+executes the page rather than reading it. The one apparent overlap that is real
+coverage is the server-rendered first value: e2e samples after the frontend
+script has run, so only smoke can tell a server-side conversion from a fast
+client-side one.
+
+`tests/lib/` holds what smoke and e2e share — the wp-env plumbing
+(`forSuite()`), the Elementor fixture, and `fixture.js` describing the values
+both suites assert against.
+
 ## Project Structure
 
 ```
 ├── custom-digits-for-elementor-counter.php  # Main plugin file, init hooks
 ├── includes/
-│   └── class-plugin.php                 # Main Plugin singleton, controls & frontend data
+│   ├── class-plugin.php                 # Main Plugin singleton, controls & frontend data
+│   └── class-digits.php                 # Digit-set parsing and conversion
 ├── assets/
-│   └── js/custom-digits-counter.js      # Frontend digit conversion & mutation observer
+│   └── js/
+│       ├── custom-digits-counter.js     # Frontend digit conversion & mutation observer
+│       └── custom-digits-counter-editor.js  # Editor-side control validation
+├── tests/
+│   ├── DigitsTest.php                   # PHPUnit: the Digits class
+│   ├── js/                              # Jest + jsdom: the browser scripts
+│   ├── lib/                             # Shared by smoke and e2e: wp-env plumbing,
+│   │                                    #   Elementor fixture, expected values
+│   ├── smoke/                           # Jest: boots wp-env, reads the rendered HTML
+│   └── e2e/                             # Playwright: drives real browsers
 ├── README.md                            # User-facing docs
 ├── .wp-env.json                         # Local dev environment config
 └── CLAUDE.md                            # This file
