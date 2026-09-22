@@ -31,11 +31,12 @@ jobs:
   prerelease:
     name: WordPress + Elementor nightly
     runs-on: ubuntu-latest
-    # Advisory by design. A break in an unreleased WordPress or Elementor is not a
-    # defect in this plugin yet, and neither is an Elementor release day making the
-    # version check read equal. Current stable is covered by the other four
-    # workflows; this one reports neutral rather than red so it never blocks a merge.
-    continue-on-error: true
+    # This job reports failure honestly, and is kept OUT of the required checks on
+    # main instead. Those are different things: "not required" means a break never
+    # blocks a merge, while continue-on-error would mean the run concludes success
+    # even when the job failed — no red badge and no failure email, which is the
+    # one outcome that makes a weekly scheduled test pointless.
+    #
     # Higher than the 20 minutes smoke and e2e use: the WordPress nightly zip alone
     # is a ~61 MB cold download, on top of Docker images and three browsers.
     timeout-minutes: 30
