@@ -18,7 +18,7 @@
                         "settings": {
                             "starting_number": 786,
                             "ending_number": 2025,
-                            "title": "E2E A: custom digits (786 -> 2025)",
+                            "title": "A: custom digits (786 -> 2025)",
                             "custom_digits_counter_custom_digits": "٠,١,٢,٣,٤,٥,٦,٧,٨,٩"
                         }
                     },
@@ -29,7 +29,7 @@
                         "settings": {
                             "starting_number": 512,
                             "ending_number": 1999,
-                            "title": "E2E B: control, no custom digits (512 -> 1999)"
+                            "title": "B: control, no custom digits (512 -> 1999)"
                         }
                     }
                 ]

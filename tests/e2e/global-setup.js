@@ -8,27 +8,16 @@
 
 "use strict";
 
-const { CONTAINER_E2E, ensureEnvironment, log, wp, writeState } = require("./lib/environment");
+const { createPage, ensureEnvironment, ensureTheme, log, writeState } = require("./lib/environment");
 
 module.exports = async function globalSetup() {
     const container = ensureEnvironment();
 
-    const activeTheme = wp(container, ["theme", "list", "--status=active", "--field=name"]).trim();
+    ensureTheme(container);
 
-    if (activeTheme !== "hello-elementor") {
-        log(`activating hello-elementor (was ${activeTheme || "none"})`);
-        wp(container, ["theme", "activate", "hello-elementor"]);
-    }
+    const { postId, permalink } = createPage(container, "Custom Digits e2e test");
 
-    const created = wp(container, ["eval-file", `${CONTAINER_E2E}/create-page.php`]);
-    const postId = (created.match(/^POSTID (\d+)$/m) || [])[1];
-    const permalink = (created.match(/^PERMALINK (\S+)$/m) || [])[1];
-
-    if (!postId || !permalink) {
-        throw new Error(`could not create the e2e page:\n${created}`);
-    }
-
-    writeState({ container, postId: Number(postId), permalink });
+    writeState({ container, postId, permalink });
 
     log(`published ${permalink}`);
 };
