@@ -9,8 +9,15 @@ on:
       - main
   workflow_dispatch:
 
+# The action posts its findings as a pull request comment, created once and then
+# updated in place on later pushes. Without pull-requests:write that call is
+# rejected and the action degrades to a "Failed to post/update comment" warning
+# on every run. A pull request opened from a fork receives a read-only token
+# whatever is written here, so those still warn - a GitHub constraint, not a
+# misconfiguration.
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: plugin-check-${{ github.ref }}
@@ -20,6 +27,11 @@ jobs:
   plugin-check:
     name: WordPress Plugin Check
     runs-on: ubuntu-latest
+    # Same 30 minutes prerelease.yml allows, for the same reason: this job boots
+    # Docker and wp-env, and the action wraps its own start step in three
+    # attempts of up to 10 minutes each. Without a limit a hung boot would run
+    # against the 6 hour default.
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -36,6 +48,10 @@ jobs:
       # CI judges the plugin users receive rather than the repository.
       # .wp-env.json is pruned along with everything else, so the action
       # generates its own wp-env config rather than booting the development one.
+      #
+      # .distignore is the only description of that file set, shared with the
+      # release build, so an omission there is a shipped file here. The listing
+      # printed below is what makes such an omission visible in the log.
       - name: Reduce checkout to the distributable file set
         run: |
           set -euo pipefail
@@ -45,7 +61,32 @@ jobs:
           echo "Files Plugin Check will see:"
           find . -mindepth 1 -not -path './.git/*' -not -name '.git' | sed 's|^\./||' | sort
 
+      # `checks`, `categories` and the severity inputs are deliberately unset.
+      # Empty means every check in every category, which is the widest the action
+      # runs - naming them would freeze coverage at today's set and silently skip
+      # whatever Plugin Check adds later. The severity inputs filter only when
+      # non-empty, so empty is already unfiltered. The run's own "Debugging
+      # information" group prints `wp plugin list-checks` and
+      # `wp plugin list-check-categories`, which is where to read the live
+      # inventory rather than pinning a copy of it here.
       - name: WordPress Plugin Check
         uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
         with:
           build-dir: './'
+
+          # Warnings fail the job as errors do. The action installs the current
+          # plugin-check from wordpress.org on every run, so a new release of it
+          # can turn main red with nothing changed here. That is the accepted
+          # cost: a check that reports a problem as a passing build is a check
+          # that is not doing anything (see prerelease.yml for the same call).
+          strict: 'true'
+
+          # Off by default in the action, despite what its README claims. No
+          # check ships as experimental today, so this changes nothing now and
+          # picks up the ones that do without needing an edit here.
+          include-experimental: 'true'
+
+          # The action otherwise derives the slug from the checkout directory,
+          # which is the repository name. It matches today; setting it keeps the
+          # checks and the results artifact correct if the repository is renamed.
+          slug: custom-digits-for-elementor-counter

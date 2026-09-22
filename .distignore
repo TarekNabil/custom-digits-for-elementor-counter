@@ -2,6 +2,10 @@
 # Read by `wp dist-archive`, by 10up/action-wordpress-plugin-deploy, and by
 # this plugin's Plugin Check workflow (.github/workflows/plugin-check.yml),
 # which prunes these before running the checks so CI sees what users get.
+#
+# .gitignore is not consulted by any of them, so anything ignored there that
+# lands in the working tree has to be repeated here or a release built locally
+# will ship it. Keep the two in step when adding to either.
 
 # Version control
 .git
@@ -14,12 +18,16 @@
 .wordpress-org
 
 # Local development environment
+.wp-env
 .wp-env.json
 .wp-env.override.json
 .distignore
 .editorconfig
 node_modules
 vendor
+build
+dist
+wp-content
 package.json
 package-lock.json
 jest.config.js
@@ -32,19 +40,31 @@ phpcs.xml.dist
 phpunit.xml
 phpunit.xml.dist
 .phpunit.result.cache
+.phpunit.cache
 tests
 coverage
 codecov.yml
 
+# Test artifacts. Written into the working tree by a local run, never by a CI
+# checkout, so only a release built from a dirty tree would ship them — and
+# playwright-report/ carries minified bundles, videos and a font, which is
+# exactly what minified_files, code_obfuscation and file_type reject.
+test-results
+playwright-report
+blob-report
+
 # AI agent tooling
 .claude
 .agents
+.config
+.opencode
 skills-lock.json
 CLAUDE.md
 AGENTS.md
 
 # Developer docs (wordpress.org uses readme.txt)
 README.md
+NEXT-PLAN.md
 
 # IDE / OS / logs
 .vscode
