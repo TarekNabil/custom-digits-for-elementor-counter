@@ -18,7 +18,6 @@ package-lock.json.bak
 skills-lock.json
 .config/
 .opencode/
-AGENTS.md
 
 # IDE & editor
 .vscode/
