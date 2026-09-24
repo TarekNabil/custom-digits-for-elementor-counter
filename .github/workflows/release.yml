@@ -51,21 +51,38 @@ jobs:
             fi
           done
 
-      # The directory inside the zip has to be the plugin slug: WordPress names
-      # the installed plugin after it, and Playground installs from this zip.
-      # The asset name carries no version so that
+      # wp dist-archive is the tool .distignore is written for, and the one the
+      # Plugin Check action's README recommends for building a clean plugin.
+      # It needs WP-CLI but not a WordPress install.
+      - name: Set up PHP and WP-CLI
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: wp-cli
+
+      # Pinned rather than @stable: dist-archive 3.2.x requires WP-CLI 2.13,
+      # which has no stable release yet, so @stable resolves to a version that
+      # cannot install against the WP-CLI setup-php provides. 3.1.0 accepts any
+      # WP-CLI 2.x. Move the pin once WP-CLI 2.13 ships.
+      - name: Install wp dist-archive
+        run: wp package install wp-cli/dist-archive-command:v3.1.0
+
+      # --plugin-dirname fixes the directory inside the zip to the plugin slug:
+      # WordPress names the installed plugin after it, and Playground installs
+      # from this zip. Without it, the name would come from the checkout
+      # directory. The asset name carries no version so that
       # releases/latest/download/custom-digits-for-elementor-counter.zip always
-      # resolves to the newest release.
+      # resolves to the newest release. The zip is written outside the checkout
+      # so it cannot end up inside itself.
       - name: Build the plugin zip
         run: |
           set -euo pipefail
           SLUG=custom-digits-for-elementor-counter
-          mkdir -p "${RUNNER_TEMP}/build/${SLUG}"
-          rsync -a --exclude-from='.distignore' --exclude='.git/' ./ "${RUNNER_TEMP}/build/${SLUG}/"
-          (cd "${RUNNER_TEMP}/build" && zip -rqX "${RUNNER_TEMP}/${SLUG}.zip" "${SLUG}")
+          wp dist-archive . "${RUNNER_TEMP}/${SLUG}.zip" --plugin-dirname="${SLUG}" --force
           echo "Files in the release zip:"
           unzip -Z1 "${RUNNER_TEMP}/${SLUG}.zip" | sort
-          test -f "${RUNNER_TEMP}/build/${SLUG}/${SLUG}.php" \
+          unzip -Z1 "${RUNNER_TEMP}/${SLUG}.zip" | grep -qx "${SLUG}/${SLUG}.php" \
             || { echo "::error::zip has no ${SLUG}/${SLUG}.php"; exit 1; }
 
       - name: Publish the release
