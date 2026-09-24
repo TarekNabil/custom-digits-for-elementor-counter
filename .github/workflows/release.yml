@@ -1,0 +1,81 @@
+name: Release
+
+# Pushing a v* tag builds the plugin zip from exactly the files .distignore lets
+# through and publishes it as a GitHub release. The zip is what users download
+# and what the Playground blueprint installs, so it is built here from a clean
+# checkout rather than on a maintainer's machine, where a dirty working tree is
+# how test reports and videos end up in a release.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  # Creating the release and uploading its asset.
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing here runs an authenticated git command; gh reads GH_TOKEN.
+          persist-credentials: false
+
+      # WordPress reads the version from three places and they drift silently:
+      # the header decides what wp-admin shows, the constant busts asset caches
+      # and Elementor's element cache, and Stable tag decides what wordpress.org
+      # serves. A tag that disagrees with any of them is refused before anything
+      # is published.
+      - name: Check the tag matches every version field
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          HEADER=$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p' custom-digits-for-elementor-counter.php)
+          CONSTANT=$(sed -nE "s/.*define\( 'CUSTOM_DIGITS_COUNTER_VERSION', '([^']+)' \).*/\1/p" custom-digits-for-elementor-counter.php)
+          STABLE=$(sed -nE 's/^Stable tag:[[:space:]]*([^[:space:]]+).*/\1/p' readme.txt)
+          echo "tag=$TAG header=$HEADER constant=$CONSTANT stable=$STABLE"
+          for v in "$HEADER" "$CONSTANT" "$STABLE"; do
+            if [ "$v" != "$TAG" ]; then
+              echo "::error::tag v$TAG does not match plugin versions (header $HEADER, constant $CONSTANT, readme Stable tag $STABLE)"
+              exit 1
+            fi
+          done
+
+      # The directory inside the zip has to be the plugin slug: WordPress names
+      # the installed plugin after it, and Playground installs from this zip.
+      # The asset name carries no version so that
+      # releases/latest/download/custom-digits-for-elementor-counter.zip always
+      # resolves to the newest release.
+      - name: Build the plugin zip
+        run: |
+          set -euo pipefail
+          SLUG=custom-digits-for-elementor-counter
+          mkdir -p "${RUNNER_TEMP}/build/${SLUG}"
+          rsync -a --exclude-from='.distignore' --exclude='.git/' ./ "${RUNNER_TEMP}/build/${SLUG}/"
+          (cd "${RUNNER_TEMP}/build" && zip -rqX "${RUNNER_TEMP}/${SLUG}.zip" "${SLUG}")
+          echo "Files in the release zip:"
+          unzip -Z1 "${RUNNER_TEMP}/${SLUG}.zip" | sort
+          test -f "${RUNNER_TEMP}/build/${SLUG}/${SLUG}.php" \
+            || { echo "::error::zip has no ${SLUG}/${SLUG}.php"; exit 1; }
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            "${RUNNER_TEMP}/custom-digits-for-elementor-counter.zip" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Custom Digits for Elementor Counter ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            --verify-tag
