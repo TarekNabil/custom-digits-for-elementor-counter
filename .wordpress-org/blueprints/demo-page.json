@@ -1,0 +1,230 @@
+[
+    {
+        "id": "d3a0001",
+        "elType": "section",
+        "settings": {
+            "padding": {
+                "unit": "px",
+                "top": "96",
+                "right": "20",
+                "bottom": "24",
+                "left": "20",
+                "isLinked": false
+            }
+        },
+        "elements": [
+            {
+                "id": "d3a0002",
+                "elType": "column",
+                "settings": {
+                    "_column_size": 100
+                },
+                "elements": [
+                    {
+                        "id": "d3a0003",
+                        "elType": "widget",
+                        "widgetType": "heading",
+                        "settings": {
+                            "title": "Make every number speak your visitors' language",
+                            "header_size": "h1",
+                            "align": "center"
+                        }
+                    },
+                    {
+                        "id": "d3a0004",
+                        "elType": "widget",
+                        "widgetType": "text-editor",
+                        "settings": {
+                            "align": "center",
+                            "editor": "<p>Custom Digits adds a single field to the Elementor Counter you already use. Enter ten characters, one for each digit from 0 to 9, and your counters display and animate in them. Type <strong>٠,١,٢,٣,٤,٥,٦,٧,٨,٩</strong> and 2026 counts up as <strong>٢٠٢٦</strong>: no new widget, no restyling, no flash of Latin digits.</p><p>Click any counter below to see how simple it is.</p>"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "d3a0010",
+        "elType": "section",
+        "settings": {
+            "padding": {
+                "unit": "px",
+                "top": "24",
+                "right": "20",
+                "bottom": "96",
+                "left": "20",
+                "isLinked": false
+            }
+        },
+        "elements": [
+            {
+                "id": "d3a0030",
+                "elType": "column",
+                "settings": {
+                    "_column_size": 50,
+                    "_inline_size_tablet": 100
+                },
+                "elements": [
+                    {
+                        "id": "d3a0031",
+                        "elType": "section",
+                        "isInner": true,
+                        "settings": {},
+                        "elements": [
+                            {
+                                "id": "d3a0021",
+                                "elType": "column",
+                                "settings": {
+                                    "_column_size": 50,
+                                    "_inline_size_mobile": 50
+                                },
+                                "elements": [
+                                    {
+                                        "id": "d3a0011",
+                                        "elType": "widget",
+                                        "widgetType": "counter",
+                                        "settings": {
+                                            "starting_number": 0,
+                                            "ending_number": 2026,
+                                            "thousand_separator": "",
+                                            "title": "Arabic-Indic · Arabic",
+                                            "custom_digits_counter_custom_digits": "٠,١,٢,٣,٤,٥,٦,٧,٨,٩",
+                                            "typography_number_typography": "custom",
+                                            "typography_number_font_size": {
+                                                "unit": "px",
+                                                "size": 56,
+                                                "sizes": []
+                                            },
+                                            "typography_number_font_size_mobile": {
+                                                "unit": "px",
+                                                "size": 32,
+                                                "sizes": []
+                                            }
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "id": "d3a0022",
+                                "elType": "column",
+                                "settings": {
+                                    "_column_size": 50,
+                                    "_inline_size_mobile": 50
+                                },
+                                "elements": [
+                                    {
+                                        "id": "d3a0012",
+                                        "elType": "widget",
+                                        "widgetType": "counter",
+                                        "settings": {
+                                            "starting_number": 0,
+                                            "ending_number": 2026,
+                                            "thousand_separator": "",
+                                            "title": "Devanagari · Hindi, Marathi, Nepali",
+                                            "custom_digits_counter_custom_digits": "०,१,२,३,४,५,६,७,८,९",
+                                            "typography_number_typography": "custom",
+                                            "typography_number_font_size": {
+                                                "unit": "px",
+                                                "size": 56,
+                                                "sizes": []
+                                            },
+                                            "typography_number_font_size_mobile": {
+                                                "unit": "px",
+                                                "size": 32,
+                                                "sizes": []
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "d3a0040",
+                "elType": "column",
+                "settings": {
+                    "_column_size": 50,
+                    "_inline_size_tablet": 100
+                },
+                "elements": [
+                    {
+                        "id": "d3a0041",
+                        "elType": "section",
+                        "isInner": true,
+                        "settings": {},
+                        "elements": [
+                            {
+                                "id": "d3a0023",
+                                "elType": "column",
+                                "settings": {
+                                    "_column_size": 50,
+                                    "_inline_size_mobile": 50
+                                },
+                                "elements": [
+                                    {
+                                        "id": "d3a0013",
+                                        "elType": "widget",
+                                        "widgetType": "counter",
+                                        "settings": {
+                                            "starting_number": 0,
+                                            "ending_number": 2026,
+                                            "thousand_separator": "",
+                                            "title": "Chinese numerals · Chinese, Japanese",
+                                            "custom_digits_counter_custom_digits": "〇,一,二,三,四,五,六,七,八,九",
+                                            "typography_number_typography": "custom",
+                                            "typography_number_font_size": {
+                                                "unit": "px",
+                                                "size": 56,
+                                                "sizes": []
+                                            },
+                                            "typography_number_font_size_mobile": {
+                                                "unit": "px",
+                                                "size": 32,
+                                                "sizes": []
+                                            }
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "id": "d3a0024",
+                                "elType": "column",
+                                "settings": {
+                                    "_column_size": 50,
+                                    "_inline_size_mobile": 50
+                                },
+                                "elements": [
+                                    {
+                                        "id": "d3a0014",
+                                        "elType": "widget",
+                                        "widgetType": "counter",
+                                        "settings": {
+                                            "starting_number": 0,
+                                            "ending_number": 2026,
+                                            "thousand_separator": "",
+                                            "title": "Any character set works",
+                                            "custom_digits_counter_custom_digits": "|,_,😊,/,#,&,ス,┴,╚,Ω",
+                                            "typography_number_typography": "custom",
+                                            "typography_number_font_size": {
+                                                "unit": "px",
+                                                "size": 56,
+                                                "sizes": []
+                                            },
+                                            "typography_number_font_size_mobile": {
+                                                "unit": "px",
+                                                "size": 32,
+                                                "sizes": []
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

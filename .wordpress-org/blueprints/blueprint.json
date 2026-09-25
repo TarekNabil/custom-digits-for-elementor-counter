@@ -32,15 +32,15 @@
 		},
 		{
 			"step": "writeFile",
-			"path": "/wordpress/counter-page.json",
+			"path": "/wordpress/demo-page.json",
 			"data": {
 				"resource": "url",
-				"url": "https://raw.githubusercontent.com/TarekNabil/custom-digits-for-elementor-counter/main/tests/lib/counter-page.json"
+				"url": "https://raw.githubusercontent.com/TarekNabil/custom-digits-for-elementor-counter/main/.wordpress-org/blueprints/demo-page.json"
 			}
 		},
 		{
 			"step": "runPHP",
-			"code": "<?php require_once '/wordpress/wp-load.php'; $data = file_get_contents('/wordpress/counter-page.json'); $id = wp_insert_post(['import_id' => 100, 'post_title' => 'Custom Digits for Elementor Counter - demo', 'post_status' => 'publish', 'post_type' => 'page', 'post_content' => '']); update_post_meta($id, '_elementor_data', wp_slash($data)); update_post_meta($id, '_elementor_edit_mode', 'builder'); update_post_meta($id, '_elementor_template_type', 'wp-post'); update_post_meta($id, '_elementor_version', defined('ELEMENTOR_VERSION') ? ELEMENTOR_VERSION : '0'); update_option('show_on_front', 'page'); update_option('page_on_front', $id); delete_transient('elementor_activation_redirect'); delete_transient('elementor_updater_redirect');"
+			"code": "<?php require_once '/wordpress/wp-load.php'; $data = file_get_contents('/wordpress/demo-page.json'); $id = wp_insert_post(['import_id' => 100, 'post_title' => 'Custom Digits for Elementor Counter - demo', 'post_status' => 'publish', 'post_type' => 'page', 'post_content' => '']); update_post_meta($id, '_elementor_data', wp_slash($data)); update_post_meta($id, '_elementor_edit_mode', 'builder'); update_post_meta($id, '_wp_page_template', 'elementor_canvas'); update_post_meta($id, '_elementor_template_type', 'wp-post'); update_post_meta($id, '_elementor_version', defined('ELEMENTOR_VERSION') ? ELEMENTOR_VERSION : '0'); update_option('show_on_front', 'page'); update_option('page_on_front', $id); delete_transient('elementor_activation_redirect'); delete_transient('elementor_updater_redirect');"
 		}
 	]
 }
