@@ -6,6 +6,7 @@
 [![E2E Test](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml/badge.svg)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/e2e.yml)
 [![codecov](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter/branch/main/graph/badge.svg)](https://codecov.io/gh/TarekNabil/custom-digits-for-elementor-counter)
 [![WordPress](https://img.shields.io/badge/WordPress-latest-0073aa?logo=wordpress&logoColor=white)](https://github.com/TarekNabil/custom-digits-for-elementor-counter/actions/workflows/smoke.yml)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-WordPress%20Playground-3858E9?logo=wordpress&logoColor=FFFFFF&labelColor=3858E9)](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/TarekNabil/custom-digits-for-elementor-counter/main/.wordpress-org/blueprints/blueprint.json)
 
 Display and animate Elementor's native **Counter** widget in any numeral system,
 by supplying your own set of ten digit characters.
