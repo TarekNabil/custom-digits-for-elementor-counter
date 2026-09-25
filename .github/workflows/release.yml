@@ -53,20 +53,32 @@ jobs:
 
       # wp dist-archive is the tool .distignore is written for, and the one the
       # Plugin Check action's README recommends for building a clean plugin.
-      # It needs WP-CLI but not a WordPress install.
-      - name: Set up PHP and WP-CLI
+      # It runs on WP-CLI but needs no WordPress install.
+      - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: '8.3'
           coverage: none
-          tools: wp-cli
+          tools: composer
 
-      # Pinned rather than @stable: dist-archive 3.2.x requires WP-CLI 2.13,
-      # which has no stable release yet, so @stable resolves to a version that
-      # cannot install against the WP-CLI setup-php provides. 3.1.0 accepts any
-      # WP-CLI 2.x. Move the pin once WP-CLI 2.13 ships.
+      # Installed with Composer from Packagist, not `wp package install`. The
+      # latest stable WP-CLI (2.12) bundles Composer 2.2, which rejects the token
+      # format GitHub Actions now issues ("contains invalid characters",
+      # composer/composer#12076). setup-php writes that token into Composer's
+      # auth.json, so `wp package install` fails reading it. The Composer
+      # setup-php installs accepts it. Requiring the package pulls WP-CLI in as
+      # a dependency, and its vendor/bin/wp registers dist-archive through the
+      # autoloader.
+      #
+      # Pinned: dist-archive 3.2.x requires WP-CLI 2.13, which has no stable
+      # release yet. 3.1.0 accepts any WP-CLI 2.x. Move the pin once 2.13 ships.
       - name: Install wp dist-archive
-        run: wp package install wp-cli/dist-archive-command:v3.1.0
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/wp-cli"
+          composer require --working-dir="${RUNNER_TEMP}/wp-cli" --no-interaction --no-progress \
+            wp-cli/dist-archive-command:3.1.0
+          "${RUNNER_TEMP}/wp-cli/vendor/bin/wp" --version
 
       # --plugin-dirname fixes the directory inside the zip to the plugin slug:
       # WordPress names the installed plugin after it, and Playground installs
@@ -79,7 +91,7 @@ jobs:
         run: |
           set -euo pipefail
           SLUG=custom-digits-for-elementor-counter
-          wp dist-archive . "${RUNNER_TEMP}/${SLUG}.zip" --plugin-dirname="${SLUG}" --force
+          "${RUNNER_TEMP}/wp-cli/vendor/bin/wp" dist-archive . "${RUNNER_TEMP}/${SLUG}.zip" --plugin-dirname="${SLUG}" --force
           echo "Files in the release zip:"
           unzip -Z1 "${RUNNER_TEMP}/${SLUG}.zip" | sort
           unzip -Z1 "${RUNNER_TEMP}/${SLUG}.zip" | grep -qx "${SLUG}/${SLUG}.php" \
