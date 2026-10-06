@@ -22,6 +22,7 @@
     },
     "scripts": {
         "test": "phpunit",
-        "test:coverage": "phpunit --coverage-text --coverage-clover=coverage/clover.xml"
+        "test:coverage": "phpunit --coverage-text --coverage-clover=coverage/clover.xml",
+        "make-pot": "wp i18n make-pot . languages/custom-digits-for-elementor-counter.pot --exclude=tests,coverage,playwright-report,test-results,blob-report,.wordpress-org"
     }
 }
