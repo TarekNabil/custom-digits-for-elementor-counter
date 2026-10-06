@@ -155,8 +155,10 @@ final class Plugin {
 				'label'       => esc_html__( 'Custom Digits', 'custom-digits-for-elementor-counter' ),
 				'type'        => \Elementor\Controls_Manager::TEXTAREA,
 				'default'     => '',
-				'placeholder' => '٠,١,٢,٣,٤,٥,٦,٧,٨,٩',
-				'description' => esc_html__( 'Exactly ten single characters separated by commas, in order from zero to nine. Spaces around each character are ignored. Any other format is ignored entirely.', 'custom-digits-for-elementor-counter' ),
+				/* translators: Example shown in the empty field. Replace with the ten digits of your language's own numeral system, zero to nine, keeping the Latin comma (,) between them. If your language uses Latin digits, keep these. */
+				'placeholder' => esc_attr__( '٠,١,٢,٣,٤,٥,٦,٧,٨,٩', 'custom-digits-for-elementor-counter' ),
+				/* translators: Keep "(,)" as the Latin comma. It is the only separator the field accepts; a localized comma such as the Arabic comma (،) is rejected. */
+				'description' => esc_html__( 'Exactly ten single characters in order from zero to nine, separated by commas (,). Spaces around each character are ignored. Any other format is ignored entirely.', 'custom-digits-for-elementor-counter' ),
 			]
 		);
 

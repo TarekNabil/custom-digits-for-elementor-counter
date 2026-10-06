@@ -119,6 +119,8 @@ both suites assert against.
 │   └── js/
 │       ├── custom-digits-counter.js     # Frontend digit conversion & mutation observer
 │       └── custom-digits-counter-editor.js  # Editor-side control validation
+├── languages/
+│   └── custom-digits-for-elementor-counter.pot  # Translation template (`composer make-pot`)
 ├── tests/
 │   ├── DigitsTest.php                   # PHPUnit: the Digits class
 │   ├── js/                              # Jest + jsdom: the browser scripts
@@ -168,7 +170,7 @@ elementorFrontend.hooks.addAction(
 2. **Always provide fallbacks** for late-rendered widgets (AJAX, dynamic content).
 3. **Maintain backward compatibility** — don't break existing counter functionality.
 4. **Document public APIs** if exposing custom hooks or filters.
-5. **Localize strings** — all user-facing text must use `esc_html__()` with the text domain.
+5. **Localize strings** — all user-facing text must use `esc_html__()` with the text domain. Run `composer make-pot` after adding or changing a string so `languages/` stays in step.
 
 ## Debugging
 

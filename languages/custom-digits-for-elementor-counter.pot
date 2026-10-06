@@ -1,0 +1,55 @@
+# Copyright (C) 2026 Tarek Nabil
+# This file is distributed under the GPL-3.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Custom Digits for Elementor Counter 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/custom-digits-for-elementor-counter\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-06T00:09:17+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: custom-digits-for-elementor-counter\n"
+
+#. Plugin Name of the plugin
+#: custom-digits-for-elementor-counter.php
+msgid "Custom Digits for Elementor Counter"
+msgstr ""
+
+#. Description of the plugin
+#: custom-digits-for-elementor-counter.php
+msgid "Display Elementor's native Counter in any numeral system or custom character set — Arabic-Indic, Devanagari, Latin, or your own."
+msgstr ""
+
+#. Author of the plugin
+#: custom-digits-for-elementor-counter.php
+msgid "Tarek Nabil"
+msgstr ""
+
+#. translators: %s: Elementor plugin name
+#: custom-digits-for-elementor-counter.php:42
+#, php-format
+msgid "Custom Digits for Elementor Counter requires %s to be installed and activated."
+msgstr ""
+
+#: custom-digits-for-elementor-counter.php:43
+msgid "Elementor"
+msgstr ""
+
+#: includes/class-plugin.php:147
+#: includes/class-plugin.php:155
+msgid "Custom Digits"
+msgstr ""
+
+#. translators: Example shown in the empty field. Replace with the ten digits of your language's own numeral system, zero to nine, keeping the Latin comma (,) between them. If your language uses Latin digits, keep these.
+#: includes/class-plugin.php:159
+msgid "٠,١,٢,٣,٤,٥,٦,٧,٨,٩"
+msgstr ""
+
+#. translators: Keep "(,)" as the Latin comma. It is the only separator the field accepts; a localized comma such as the Arabic comma (،) is rejected.
+#: includes/class-plugin.php:161
+msgid "Exactly ten single characters in order from zero to nine, separated by commas (,). Spaces around each character are ignored. Any other format is ignored entirely."
+msgstr ""
