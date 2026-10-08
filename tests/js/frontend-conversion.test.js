@@ -36,7 +36,9 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeEach(() => {
   document.body.innerHTML = "";
+  document.documentElement.lang = "en";
   delete window.elementorFrontend;
+  delete window.gtAddonSettings;
 });
 
 describe("initial conversion", () => {
@@ -111,6 +113,19 @@ describe("during the count-up animation", () => {
     expect(el.textContent).toBe("٧");
   });
 
+  // A set reusing Latin digits in other positions turns the plugin's own output
+  // back into "Latin" input; converting that echo would undo the frame, and the
+  // undo would be converted again, endlessly.
+  test("does not re-convert its own output for a Latin-digit permutation", async () => {
+    const el = addCounter("0", { map: ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0"] });
+    loadScript();
+
+    el.textContent = "12";
+    await flush();
+    await flush();
+    expect(el.textContent).toBe("87");
+  }, 1000);
+
   test("binds only one observer per element across repeated scans", async () => {
     const el = addCounter("1");
     loadScript();
@@ -121,6 +136,138 @@ describe("during the count-up animation", () => {
     el.textContent = "42";
     await flush();
     expect(el.textContent).toBe("٤٢");
+  });
+});
+
+describe("GTranslate Visual Addon overrides", () => {
+  const LATIN = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  const DEVANAGARI = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+
+  /** Saves pairs the way the addon hands them to the browser. */
+  function saveAddonPairs(lang, pairs) {
+    window.gtAddonSettings = { translations: { [lang]: pairs }, containers: [] };
+  }
+
+  /** Switches <html lang> as GTranslate's widget does once it has translated. */
+  async function switchLanguage(lang) {
+    document.documentElement.lang = lang;
+    await flush();
+  }
+
+  test("rewrites the value when the page switches to a language with a saved set", async () => {
+    saveAddonPairs("ar", { "0,1,2,3,4,5,6,7,8,9": ARABIC_INDIC.join(",") });
+    const el = addCounter("100", { map: LATIN });
+    loadScript();
+    expect(el.textContent).toBe("100");
+
+    await switchLanguage("ar");
+    expect(el.textContent).toBe("١٠٠");
+  });
+
+  test("animates in the saved set after the switch", async () => {
+    saveAddonPairs("ar", { "0,1,2,3,4,5,6,7,8,9": ARABIC_INDIC.join(",") });
+    const el = addCounter("0", { map: LATIN });
+    loadScript();
+    await switchLanguage("ar");
+
+    el.textContent = "57";
+    await flush();
+    expect(el.textContent).toBe("٥٧");
+  });
+
+  test("rewrites from a non-Latin original set", async () => {
+    saveAddonPairs("hi", { [ARABIC_INDIC.join(",")]: DEVANAGARI.join(",") });
+    const el = addCounter("100");
+    loadScript();
+    expect(el.textContent).toBe("١٠٠");
+
+    await switchLanguage("hi");
+    expect(el.textContent).toBe("१००");
+  });
+
+  test("does not convert its language rewrite back for a Latin-digit permutation", async () => {
+    saveAddonPairs("ar", { "0,1,2,3,4,5,6,7,8,9": "9,8,7,6,5,4,3,2,1,0" });
+    const el = addCounter("12", { map: LATIN });
+    loadScript();
+
+    await switchLanguage("ar");
+    await flush();
+    expect(el.textContent).toBe("87");
+
+    el.textContent = "34";
+    await flush();
+    await flush();
+    expect(el.textContent).toBe("65");
+  }, 1000);
+
+  test("converts a frame still waiting for the observer before rewriting", async () => {
+    const reversed = ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0"];
+    saveAddonPairs("ar", { [reversed.join(",")]: ARABIC_INDIC.join(",") });
+    addCounter("1", { map: reversed }); // Starts the language watcher.
+    loadScript();
+
+    // Bound after the watcher, so the watcher's callback runs first and finds
+    // Elementor's frame still in Latin digits.
+    const el = addCounter("0", { map: reversed });
+    window.dispatchEvent(new window.Event("load"));
+
+    el.textContent = "34";
+    document.documentElement.lang = "ar";
+    await flush();
+    await flush();
+    expect(el.textContent).toBe("٣٤");
+  }, 1000);
+
+  test("applies the saved set when the page is already in that language", () => {
+    saveAddonPairs("ar", { "0,1,2,3,4,5,6,7,8,9": ARABIC_INDIC.join(",") });
+    document.documentElement.lang = "ar";
+    const el = addCounter("42", { map: LATIN });
+    loadScript();
+
+    expect(el.textContent).toBe("٤٢");
+  });
+
+  test("matches an original typed with spaces around the digits", async () => {
+    saveAddonPairs("ar", { "0, 1, 2, 3, 4, 5, 6, 7, 8, 9": ARABIC_INDIC.join(", ") });
+    const el = addCounter("9", { map: LATIN });
+    loadScript();
+
+    await switchLanguage("ar");
+    expect(el.textContent).toBe("٩");
+  });
+
+  test("returns to the original set when the page switches back", async () => {
+    saveAddonPairs("ar", { "0,1,2,3,4,5,6,7,8,9": ARABIC_INDIC.join(",") });
+    const el = addCounter("12", { map: LATIN });
+    loadScript();
+    await switchLanguage("ar");
+
+    await switchLanguage("en");
+    expect(el.textContent).toBe("12");
+  });
+
+  test.each([
+    ["no pair is saved for the counter's set", { "q,w,e,r,t,y,u,i,o,p": ARABIC_INDIC.join(",") }],
+    ["the saved set uses the Arabic comma", { "0,1,2,3,4,5,6,7,8,9": ARABIC_INDIC.join("،") }],
+    ["the saved set has too few entries", { "0,1,2,3,4,5,6,7,8,9": "٠,١,٢" }],
+    ["an entry in the saved set is two characters", { "0,1,2,3,4,5,6,7,8,9": "٠٠,١,٢,٣,٤,٥,٦,٧,٨,٩" }],
+    ["an entry in the saved set is empty", { "0,1,2,3,4,5,6,7,8,9": "٠,,٢,٣,٤,٥,٦,٧,٨,٩" }],
+    ["the saved translation is not text", { "0,1,2,3,4,5,6,7,8,9": 123 }],
+  ])("keeps the original set when %s", async (_label, pairs) => {
+    saveAddonPairs("ar", pairs);
+    const el = addCounter("2025", { map: LATIN });
+    loadScript();
+
+    await switchLanguage("ar");
+    expect(el.textContent).toBe("2025");
+  });
+
+  test("keeps the original set when the addon is not installed", async () => {
+    const el = addCounter("2025");
+    loadScript();
+
+    await switchLanguage("ar");
+    expect(el.textContent).toBe("٢٠٢٥");
   });
 });
 

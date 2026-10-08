@@ -99,6 +99,25 @@ final class Digits {
 	}
 
 	/**
+	 * Rewrites text from one digit set into another, position for position.
+	 *
+	 * A single pass, so a target set that reuses characters of the source set in
+	 * other positions cannot have one replacement feed the next.
+	 *
+	 * @param string   $text Text written in the source set.
+	 * @param string[] $from Ten characters indexed 0-9 the text is written in.
+	 * @param string[] $to   Ten characters indexed 0-9 to write it in instead.
+	 * @return string Rewritten text, unchanged if either set is not ten characters.
+	 */
+	public static function replace_set( $text, $from, $to ) {
+		if ( self::COUNT !== count( $from ) || self::COUNT !== count( $to ) ) {
+			return $text;
+		}
+
+		return strtr( $text, array_combine( $from, $to ) );
+	}
+
+	/**
 	 * Applies a digit set to the value inside Elementor's counter number span.
 	 *
 	 * Only the first counter number in the markup is converted, and only its text
