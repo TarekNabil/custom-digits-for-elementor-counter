@@ -42,7 +42,14 @@
     });
   }
 
-  // Rewrites text from one digit set into another, position for position.
+  /**
+   * Rewrites text between digit sets in one pass, leaving other characters alone.
+   *
+   * @param {string} str Text written in the source set.
+   * @param {string[]} from Source characters indexed 0-9; the first match wins.
+   * @param {string[]} to Replacement characters at the corresponding indexes.
+   * @returns {string} Text with source characters replaced, without reprocessing replacements.
+   */
   function replaceSet(str, from, to) {
     return str.replace(CHARACTER, function (character) {
       var index = from.indexOf(character);
@@ -50,6 +57,7 @@
     });
   }
 
+  /** Returns whether the entries at indexes 0-9 match in both digit sets. */
   function sameSet(a, b) {
     for (var i = 0; i < DIGIT_COUNT; i++) {
       if (a[i] !== b[i]) {
@@ -59,7 +67,14 @@
     return true;
   }
 
-  // Mirrors Digits::parse() for sets typed outside the plugin's own field.
+  /**
+   * Parses a digit set typed outside the plugin's own field.
+   *
+   * Requires exactly ten comma-separated entries, each a single character after
+   * trimming whitespace. A UTF-16 surrogate pair counts as one character.
+   *
+   * @returns {string[]|null} Characters indexed 0-9, or null for a non-string or invalid set.
+   */
   function parseSet(value) {
     if ("string" !== typeof value) {
       return null;
@@ -87,10 +102,15 @@
     return digits;
   }
 
-  // GTranslate Visual Addon stores manual fixes per language as
-  // "original text" => "your translation", and GTranslate's widget sets
-  // <html lang> to the language shown. A pair whose original is this counter's
-  // digit set supplies the set for that language.
+  /**
+   * Finds a GTranslate Visual Addon digit set for the current <html lang>.
+   *
+   * Matches saved original text against the counter's original set after parsing
+   * both sides of each translation pair, ignoring invalid pairs.
+   *
+   * @param {string[]} digits The counter's original characters indexed 0-9.
+   * @returns {string[]|null} First valid matching translation, or null if none is available.
+   */
   function getTranslatedDigits(digits) {
     var settings = window.gtAddonSettings;
     var pairs =
@@ -116,6 +136,10 @@
     return null;
   }
 
+  /**
+   * Notifies bound counters when <html lang> changes using one shared observer.
+   * Does nothing if already watching or MutationObserver is unavailable.
+   */
   function watchLanguage() {
     if (watchingLanguage || "function" !== typeof MutationObserver) {
       return;
@@ -132,6 +156,14 @@
     });
   }
 
+  /**
+   * Converts a counter immediately and keeps it updated during animation and
+   * language changes. Missing or invalid translations restore its original set.
+   * Skips counters already bound, not enabled, or without a ten-entry digit map.
+   *
+   * @param {Element} numberEl Counter number element whose text will be rewritten.
+   * @throws {ReferenceError} If MutationObserver is not defined when binding the counter.
+   */
   function convertNativeCounter(numberEl) {
     if (
       "yes" !== numberEl.getAttribute("data-custom-digits-counter") ||
@@ -151,6 +183,7 @@
     // the original set.
     var applied = original;
 
+    /** Replaces Latin digits in the counter's text using the currently applied set. */
     var updateDigits = function () {
       var current = numberEl.textContent;
       var converted = convert(current, applied);
@@ -160,6 +193,7 @@
       }
     };
 
+    /** Rewrites the current text into the translated set, or the original as a fallback. */
     var updateLanguage = function () {
       var next = getTranslatedDigits(original) || original;
 
