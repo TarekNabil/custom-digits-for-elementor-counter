@@ -107,7 +107,7 @@ final class Digits {
 	 * @param string   $text Text written in the source set.
 	 * @param string[] $from Ten characters indexed 0-9 the text is written in.
 	 * @param string[] $to   Ten characters indexed 0-9 to write it in instead.
-	 * @return string Rewritten text, unchanged if either set is not ten characters.
+	 * @return string Rewritten text, unchanged if either set does not contain ten entries.
 	 */
 	public static function replace_set( $text, $from, $to ) {
 		if ( self::COUNT !== count( $from ) || self::COUNT !== count( $to ) ) {

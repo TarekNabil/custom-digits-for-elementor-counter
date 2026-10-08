@@ -91,7 +91,8 @@ final class Plugin {
 	}
 
 	/**
-	 * Registers the Elementor control, render and asset hooks.
+	 * Registers Elementor control, render and asset hooks, cache invalidation,
+	 * and the WPML and TranslatePress integration filters.
 	 */
 	private function __construct() {
 		add_action( 'elementor/element/counter/section_counter/after_section_end', [ $this, 'add_controls' ] );
@@ -317,13 +318,15 @@ final class Plugin {
 	 * Resolves the widget's digit settings into the counter data attributes.
 	 *
 	 * A valid custom digit set is passed through as JSON so the frontend script
-	 * applies the same set the server did, and again as typed for TranslatePress.
+	 * applies the same set the server did, and as a comma-separated string with
+	 * whitespace around each digit removed for TranslatePress.
 	 * The TranslatePress attributes are emitted whether or not it is active:
 	 * Elementor caches rendered widget markup, so a counter cached before
 	 * TranslatePress was activated would otherwise never become translatable.
 	 *
 	 * @param \Elementor\Widget_Base $widget Counter widget to read settings from.
-	 * @return array<string,string> Attribute name/value pairs.
+	 * @return array<string,string> Attribute name/value pairs, or only the disabled
+	 *                             flag when the digit setting is empty or invalid.
 	 */
 	private function get_render_attributes( $widget ) {
 		$digits = $this->get_custom_digits( $widget );
@@ -418,16 +421,17 @@ final class Plugin {
 	 *
 	 * TranslatePress trims a string made only of Latin digits and punctuation to
 	 * nothing unless its "translate numbers" setting is on, so a counter whose
-	 * original set is `0,1,2,3,4,5,6,7,8,9` would never be offered. Only these
-	 * digit sets are added back, not every number on the site, and
-	 * TranslatePress's machine translator skips them as having no letters.
+	 * original set is `0,1,2,3,4,5,6,7,8,9` would never be offered. Any valid set
+	 * on an element not already listed is added back, including non-Latin sets.
+	 * Translation opt-outs and translation blocks are respected when the renderer
+	 * provides the corresponding ancestor checks.
 	 *
 	 * @param array       $information            Parallel `translateable_strings` and `nodes` lists.
 	 * @param object      $html                   Parsed page, as TranslatePress's HTML DOM.
 	 * @param string      $no_translate_attribute Attribute that opts an element out of translation.
 	 * @param string      $language               Language being rendered.
 	 * @param string      $language_code          Language being rendered, as a code.
-	 * @param object|null $render                 TranslatePress's renderer.
+	 * @param object|null $render                 Renderer used to check translation exclusions, if available.
 	 * @return array
 	 */
 	public function restore_translatepress_numeric_sets( $information, $html, $no_translate_attribute = 'data-no-translation', $language = '', $language_code = '', $render = null ) {
@@ -443,6 +447,7 @@ final class Plugin {
 			}
 		}
 
+		/** Returns whether available renderer checks exclude the element from translation. */
 		$opted_out = function ( $element ) use ( $render, $no_translate_attribute ) {
 			if ( ! is_object( $render ) ) {
 				return false;
@@ -477,7 +482,9 @@ final class Plugin {
 	 * Runs after TranslatePress has rewritten the set attribute, so the first
 	 * paint already uses the translated digits and the map handed to the
 	 * frontend script animates in them too. A translation that is not a valid
-	 * set leaves the counter in its original digits.
+	 * set leaves the counter in its original digits. A missing or non-array
+	 * original map also leaves the counter unchanged. A regex failure preserves
+	 * the affected counter, or the whole input if the outer replacement fails.
 	 *
 	 * @param string $html Page markup as translated by TranslatePress.
 	 * @return string
@@ -521,11 +528,13 @@ final class Plugin {
 	}
 
 	/**
-	 * Reads one attribute's decoded value from an opening HTML tag.
+	 * Reads one quoted attribute's decoded value from an opening HTML tag.
+	 * The name and equals sign must be adjacent, followed immediately by a quote.
 	 *
 	 * @param string $tag       Opening tag markup.
 	 * @param string $attribute Attribute name.
-	 * @return string Decoded value, or an empty string if the attribute is absent.
+	 * @return string Decoded value, or an empty string if no attribute matches or
+	 *                the regex fails.
 	 */
 	private function get_tag_attribute( $tag, $attribute ) {
 		if ( ! preg_match( '/\s' . preg_quote( $attribute, '/' ) . '=(["\'])(.*?)\1/s', $tag, $matches ) ) {
