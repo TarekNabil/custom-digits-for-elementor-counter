@@ -44,6 +44,20 @@ final class Plugin {
 	const MAP_ATTRIBUTE = self::DATA_ATTRIBUTE . '-map';
 
 	/**
+	 * Data attribute carrying the digit set as typed, for TranslatePress to translate.
+	 *
+	 * @var string
+	 */
+	const SET_ATTRIBUTE = self::DATA_ATTRIBUTE . '-set';
+
+	/**
+	 * Node type TranslatePress records the digit set under.
+	 *
+	 * @var string
+	 */
+	const TRANSLATEPRESS_NODE_TYPE = 'custom_digits_counter_set';
+
+	/**
 	 * Separator between digits in the "Custom Digits" control.
 	 *
 	 * @var string
@@ -88,6 +102,12 @@ final class Plugin {
 		add_action( 'elementor/editor/after_enqueue_scripts', [ $this, 'enqueue_editor_script' ] );
 		add_action( 'elementor/editor/after_enqueue_styles', [ $this, 'enqueue_editor_style' ] );
 		add_action( 'init', [ $this, 'maybe_flush_element_cache' ] );
+		add_filter( 'wpml_elementor_widgets_to_translate', [ $this, 'register_wpml_field' ] );
+		add_filter( 'trp_node_accessors', [ $this, 'register_translatepress_accessor' ] );
+		add_filter( 'trp_allow_machine_translation_for_string', [ $this, 'skip_translatepress_machine_translation' ], 10, 3 );
+		add_filter( 'trp_translateable_strings', [ $this, 'skip_translatepress_counter_value' ] );
+		add_filter( 'trp_translateable_strings', [ $this, 'restore_translatepress_numeric_sets' ], 10, 6 );
+		add_filter( 'trp_translated_html', [ $this, 'apply_translatepress_digits' ] );
 	}
 
 	/**
@@ -163,6 +183,36 @@ final class Plugin {
 		);
 
 		$widget->end_controls_section();
+	}
+
+	/**
+	 * Exposes the "Custom Digits" field to WPML as its own translation box.
+	 *
+	 * Appended to WPML's existing Counter entry rather than declared in a
+	 * wpml-config.xml: WPML merges config-file widgets over its defaults by
+	 * widget name, so a `counter` entry there would drop the Title, Prefix and
+	 * Suffix fields instead of adding to them. The label is passed unescaped
+	 * because WPML escapes it where it is displayed.
+	 *
+	 * @param array $widgets Widgets WPML translates, keyed by widget name.
+	 * @return array
+	 */
+	public function register_wpml_field( $widgets ) {
+		if ( ! isset( $widgets['counter'] ) ) {
+			$widgets['counter'] = [
+				'conditions' => [ 'widgetType' => 'counter' ],
+				'fields'     => [],
+			];
+		}
+
+		$widgets['counter']['fields'][] = [
+			'field'       => 'custom_digits_counter_custom_digits',
+			/* translators: Label of the Custom Digits field in WPML's translation editor. */
+			'type'        => __( 'Counter: Custom Digits', 'custom-digits-for-elementor-counter' ),
+			'editor_type' => 'LINE',
+		];
+
+		return $widgets;
 	}
 
 	/**
@@ -267,7 +317,10 @@ final class Plugin {
 	 * Resolves the widget's digit settings into the counter data attributes.
 	 *
 	 * A valid custom digit set is passed through as JSON so the frontend script
-	 * applies the same set the server did.
+	 * applies the same set the server did, and again as typed for TranslatePress.
+	 * The TranslatePress attributes are emitted whether or not it is active:
+	 * Elementor caches rendered widget markup, so a counter cached before
+	 * TranslatePress was activated would otherwise never become translatable.
 	 *
 	 * @param \Elementor\Widget_Base $widget Counter widget to read settings from.
 	 * @return array<string,string> Attribute name/value pairs.
@@ -280,9 +333,206 @@ final class Plugin {
 		}
 
 		return [
-			self::DATA_ATTRIBUTE => 'yes',
-			self::MAP_ATTRIBUTE  => wp_json_encode( $digits ),
+			self::DATA_ATTRIBUTE          => 'yes',
+			self::MAP_ATTRIBUTE           => wp_json_encode( $digits ),
+			self::SET_ATTRIBUTE           => implode( self::CUSTOM_DIGITS_SEPARATOR, $digits ),
+			// The count-up rewrites the value every frame; TranslatePress would
+			// otherwise look each frame up as a new string.
+			'data-no-dynamic-translation' => '',
+			// Keeps in-browser translators such as GTranslate's Google widget off
+			// the value, which the frontend script owns.
+			'translate'                   => 'no',
 		];
+	}
+
+	/**
+	 * Lets TranslatePress translate a counter's digit set like any other string.
+	 *
+	 * TranslatePress translates the rendered page, so the set travels on the
+	 * counter number as an attribute it is told to translate, which also puts
+	 * its edit pencil on the counter itself. TranslatePress keys translations by
+	 * the original string, so counters sharing an original set share a
+	 * translation.
+	 *
+	 * @param array $accessors Attributes TranslatePress translates, keyed by type.
+	 * @return array
+	 */
+	public function register_translatepress_accessor( $accessors ) {
+		$accessors[ self::TRANSLATEPRESS_NODE_TYPE ] = [
+			'selector'  => '[' . self::SET_ATTRIBUTE . ']',
+			'accessor'  => self::SET_ATTRIBUTE,
+			'attribute' => true,
+		];
+
+		return $accessors;
+	}
+
+	/**
+	 * Keeps TranslatePress's machine translation away from digit sets.
+	 *
+	 * A translation engine may swap the comma for a localized one such as the
+	 * Arabic comma, which the parser rejects, leaving the counter in its
+	 * original digits.
+	 *
+	 * @param bool        $allow    Whether the string may be machine translated.
+	 * @param string      $string   The string, entity-decoded.
+	 * @param string|null $accessor Attribute the string was read from, if any.
+	 * @return bool
+	 */
+	public function skip_translatepress_machine_translation( $allow, $string, $accessor = null ) {
+		return self::SET_ATTRIBUTE === $accessor ? false : $allow;
+	}
+
+	/**
+	 * Drops the counter's rendered value from the strings TranslatePress lists.
+	 *
+	 * The count-up rewrites that value on every frame, so a translation of it
+	 * would never be seen. Latin digits are skipped by TranslatePress as numeric
+	 * already; a value in any other set would otherwise be offered for
+	 * translation next to the digit set.
+	 *
+	 * @param array $information Parallel `translateable_strings` and `nodes` lists.
+	 * @return array
+	 */
+	public function skip_translatepress_counter_value( $information ) {
+		if ( empty( $information['nodes'] ) || ! is_array( $information['nodes'] ) ) {
+			return $information;
+		}
+
+		foreach ( $information['nodes'] as $index => $node ) {
+			$parent = isset( $node['node'] ) && is_object( $node['node'] ) ? $node['node']->parent() : null;
+
+			if ( 'text' === ( $node['type'] ?? '' ) && $parent && isset( $parent->{self::SET_ATTRIBUTE} ) ) {
+				unset( $information['nodes'][ $index ], $information['translateable_strings'][ $index ] );
+			}
+		}
+
+		$information['nodes']                 = array_values( $information['nodes'] );
+		$information['translateable_strings'] = array_values( (array) $information['translateable_strings'] );
+
+		return $information;
+	}
+
+	/**
+	 * Adds back digit sets TranslatePress discarded as numbers.
+	 *
+	 * TranslatePress trims a string made only of Latin digits and punctuation to
+	 * nothing unless its "translate numbers" setting is on, so a counter whose
+	 * original set is `0,1,2,3,4,5,6,7,8,9` would never be offered. Only these
+	 * digit sets are added back, not every number on the site, and
+	 * TranslatePress's machine translator skips them as having no letters.
+	 *
+	 * @param array       $information            Parallel `translateable_strings` and `nodes` lists.
+	 * @param object      $html                   Parsed page, as TranslatePress's HTML DOM.
+	 * @param string      $no_translate_attribute Attribute that opts an element out of translation.
+	 * @param string      $language               Language being rendered.
+	 * @param string      $language_code          Language being rendered, as a code.
+	 * @param object|null $render                 TranslatePress's renderer.
+	 * @return array
+	 */
+	public function restore_translatepress_numeric_sets( $information, $html, $no_translate_attribute = 'data-no-translation', $language = '', $language_code = '', $render = null ) {
+		if ( ! is_array( $information ) || ! is_object( $html ) || ! method_exists( $html, 'find' ) ) {
+			return $information;
+		}
+
+		$listed = [];
+
+		foreach ( (array) ( $information['nodes'] ?? [] ) as $node ) {
+			if ( self::TRANSLATEPRESS_NODE_TYPE === ( $node['type'] ?? '' ) && is_object( $node['node'] ?? null ) ) {
+				$listed[ spl_object_id( $node['node'] ) ] = true;
+			}
+		}
+
+		$opted_out = function ( $element ) use ( $render, $no_translate_attribute ) {
+			if ( ! is_object( $render ) ) {
+				return false;
+			}
+
+			return ( method_exists( $render, 'has_ancestor_attribute' )
+					&& ( $render->has_ancestor_attribute( $element, $no_translate_attribute )
+						|| $render->has_ancestor_attribute( $element, $no_translate_attribute . '-' . self::SET_ATTRIBUTE ) ) )
+				|| ( method_exists( $render, 'has_ancestor_class' ) && $render->has_ancestor_class( $element, 'translation-block' ) );
+		};
+
+		foreach ( $html->find( '[' . self::SET_ATTRIBUTE . ']' ) as $element ) {
+			$set = html_entity_decode( trim( (string) $element->getAttribute( self::SET_ATTRIBUTE ) ), ENT_QUOTES, 'UTF-8' );
+
+			if ( isset( $listed[ spl_object_id( $element ) ] ) || empty( Digits::parse( $set ) ) || $opted_out( $element ) ) {
+				continue;
+			}
+
+			$information['translateable_strings'][] = $set;
+			$information['nodes'][]                 = [
+				'node' => $element,
+				'type' => self::TRANSLATEPRESS_NODE_TYPE,
+			];
+		}
+
+		return $information;
+	}
+
+	/**
+	 * Applies each counter's translated digit set to the translated page.
+	 *
+	 * Runs after TranslatePress has rewritten the set attribute, so the first
+	 * paint already uses the translated digits and the map handed to the
+	 * frontend script animates in them too. A translation that is not a valid
+	 * set leaves the counter in its original digits.
+	 *
+	 * @param string $html Page markup as translated by TranslatePress.
+	 * @return string
+	 */
+	public function apply_translatepress_digits( $html ) {
+		if ( ! is_string( $html ) || false === strpos( $html, self::SET_ATTRIBUTE ) ) {
+			return $html;
+		}
+
+		$output = preg_replace_callback(
+			Digits::COUNTER_NUMBER_PATTERN,
+			function ( $matches ) {
+				$tag        = $matches[1];
+				$translated = Digits::parse( $this->get_tag_attribute( $tag, self::SET_ATTRIBUTE ) );
+				$original   = json_decode( $this->get_tag_attribute( $tag, self::MAP_ATTRIBUTE ), true );
+
+				if ( empty( $translated ) || ! is_array( $original ) || $translated === $original ) {
+					return $matches[0];
+				}
+
+				$map = esc_attr( wp_json_encode( $translated ) );
+				$tag = preg_replace_callback(
+					'/(\s' . preg_quote( self::MAP_ATTRIBUTE, '/' ) . '=)(["\'])(.*?)\2/s',
+					function ( $attribute ) use ( $map ) {
+						return $attribute[1] . '"' . $map . '"';
+					},
+					$tag,
+					1
+				);
+
+				if ( null === $tag ) {
+					return $matches[0];
+				}
+
+				return $tag . Digits::replace_set( $matches[3], $original, $translated ) . $matches[4];
+			},
+			$html
+		);
+
+		return null === $output ? $html : $output;
+	}
+
+	/**
+	 * Reads one attribute's decoded value from an opening HTML tag.
+	 *
+	 * @param string $tag       Opening tag markup.
+	 * @param string $attribute Attribute name.
+	 * @return string Decoded value, or an empty string if the attribute is absent.
+	 */
+	private function get_tag_attribute( $tag, $attribute ) {
+		if ( ! preg_match( '/\s' . preg_quote( $attribute, '/' ) . '=(["\'])(.*?)\1/s', $tag, $matches ) ) {
+			return '';
+		}
+
+		return html_entity_decode( $matches[2], ENT_QUOTES, 'UTF-8' );
 	}
 
 	/**

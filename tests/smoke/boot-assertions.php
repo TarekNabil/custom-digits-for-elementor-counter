@@ -28,6 +28,11 @@ $hooks = [
 	'elementor/editor/after_enqueue_scripts',
 	'elementor/editor/after_enqueue_styles',
 	'init',
+	'wpml_elementor_widgets_to_translate',
+	'trp_node_accessors',
+	'trp_allow_machine_translation_for_string',
+	'trp_translateable_strings',
+	'trp_translated_html',
 ];
 
 foreach ( $hooks as $hook ) {

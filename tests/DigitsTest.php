@@ -110,6 +110,27 @@ final class DigitsTest extends TestCase {
 		$this->assertSame( 'no digits here', Digits::convert( 'no digits here', $this->arabic_indic_map() ) );
 	}
 
+	public function test_replaces_one_digit_set_with_another(): void {
+		$devanagari = [ '०', '१', '२', '३', '४', '५', '६', '७', '८', '९' ];
+
+		$this->assertSame( '१,२३४', Digits::replace_set( '١,٢٣٤', $this->arabic_indic_map(), $devanagari ) );
+	}
+
+	/**
+	 * A target set that reuses source characters in other positions must not
+	 * have one replacement feed the next.
+	 */
+	public function test_set_replacement_is_a_single_pass(): void {
+		$latin    = [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ];
+		$reversed = array_reverse( $latin );
+
+		$this->assertSame( '9876543210', Digits::replace_set( '0123456789', $latin, $reversed ) );
+	}
+
+	public function test_set_replacement_leaves_text_unchanged_for_an_incomplete_set(): void {
+		$this->assertSame( '١٢٣', Digits::replace_set( '١٢٣', $this->arabic_indic_map(), [ '0', '1' ] ) );
+	}
+
 	public function test_converts_the_counter_value_inside_markup(): void {
 		$markup = '<span class="elementor-counter-number" data-duration="2000">2025</span>';
 

@@ -5,6 +5,12 @@
   var SELECTOR = '.elementor-counter-number[data-custom-digits-counter="yes"]';
   var MAP_ATTRIBUTE = "data-custom-digits-counter-map";
   var DIGIT_COUNT = 10;
+  var SEPARATOR = ",";
+  var CHARACTER = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\s\S]/g;
+
+  // One per bound counter, run when the page's language changes.
+  var languageListeners = [];
+  var watchingLanguage = false;
 
   // Returns the element's digit set, or null when it carries none usable.
   function getDigits(numberEl) {
@@ -36,6 +42,96 @@
     });
   }
 
+  // Rewrites text from one digit set into another, position for position.
+  function replaceSet(str, from, to) {
+    return str.replace(CHARACTER, function (character) {
+      var index = from.indexOf(character);
+      return -1 === index ? character : to[index];
+    });
+  }
+
+  function sameSet(a, b) {
+    for (var i = 0; i < DIGIT_COUNT; i++) {
+      if (a[i] !== b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Mirrors Digits::parse() for sets typed outside the plugin's own field.
+  function parseSet(value) {
+    if ("string" !== typeof value) {
+      return null;
+    }
+
+    var parts = value.split(SEPARATOR);
+
+    if (DIGIT_COUNT !== parts.length) {
+      return null;
+    }
+
+    var digits = [];
+
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i].trim();
+      var characters = part.match(CHARACTER);
+
+      if (!characters || 1 !== characters.length) {
+        return null;
+      }
+
+      digits.push(part);
+    }
+
+    return digits;
+  }
+
+  // GTranslate Visual Addon stores manual fixes per language as
+  // "original text" => "your translation", and GTranslate's widget sets
+  // <html lang> to the language shown. A pair whose original is this counter's
+  // digit set supplies the set for that language.
+  function getTranslatedDigits(digits) {
+    var settings = window.gtAddonSettings;
+    var pairs =
+      settings &&
+      settings.translations &&
+      settings.translations[document.documentElement.lang];
+
+    if (!pairs || "object" !== typeof pairs) {
+      return null;
+    }
+
+    for (var original in pairs) {
+      if (Object.prototype.hasOwnProperty.call(pairs, original)) {
+        var from = parseSet(original);
+        var to = from && sameSet(from, digits) ? parseSet(pairs[original]) : null;
+
+        if (to) {
+          return to;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function watchLanguage() {
+    if (watchingLanguage || "function" !== typeof MutationObserver) {
+      return;
+    }
+    watchingLanguage = true;
+
+    new MutationObserver(function () {
+      for (var i = 0; i < languageListeners.length; i++) {
+        languageListeners[i]();
+      }
+    }).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["lang"],
+    });
+  }
+
   function convertNativeCounter(numberEl) {
     if (
       "yes" !== numberEl.getAttribute("data-custom-digits-counter") ||
@@ -43,24 +139,46 @@
     ) {
       return;
     }
-    var digits = getDigits(numberEl);
+    var original = getDigits(numberEl);
 
-    if (null === digits) {
+    if (null === original) {
       return;
     }
 
     numberEl.customDigitsCounterBound = true;
 
+    // The set the text is written in: the server renders the resting value in
+    // the original set.
+    var applied = original;
+
     var updateDigits = function () {
       var current = numberEl.textContent;
-      var converted = convert(current, digits);
+      var converted = convert(current, applied);
 
       if (current !== converted) {
         numberEl.textContent = converted;
       }
     };
 
+    var updateLanguage = function () {
+      var next = getTranslatedDigits(original) || original;
+
+      if (sameSet(next, applied)) {
+        return;
+      }
+
+      var current = numberEl.textContent;
+      var rewritten = replaceSet(current, applied, next);
+
+      applied = next;
+
+      if (current !== rewritten) {
+        numberEl.textContent = rewritten;
+      }
+    };
+
     // Convert the resting value immediately, before the count-up animation runs.
+    updateLanguage();
     updateDigits();
 
     // Keep converting while Elementor's animation rewrites the text.
@@ -69,6 +187,9 @@
       characterData: true,
       subtree: true,
     });
+
+    languageListeners.push(updateLanguage);
+    watchLanguage();
   }
 
   function scan(root) {
