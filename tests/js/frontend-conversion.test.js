@@ -113,6 +113,19 @@ describe("during the count-up animation", () => {
     expect(el.textContent).toBe("٧");
   });
 
+  // A set reusing Latin digits in other positions turns the plugin's own output
+  // back into "Latin" input; converting that echo would undo the frame, and the
+  // undo would be converted again, endlessly.
+  test("does not re-convert its own output for a Latin-digit permutation", async () => {
+    const el = addCounter("0", { map: ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0"] });
+    loadScript();
+
+    el.textContent = "12";
+    await flush();
+    await flush();
+    expect(el.textContent).toBe("87");
+  }, 1000);
+
   test("binds only one observer per element across repeated scans", async () => {
     const el = addCounter("1");
     loadScript();
@@ -171,6 +184,39 @@ describe("GTranslate Visual Addon overrides", () => {
     await switchLanguage("hi");
     expect(el.textContent).toBe("१००");
   });
+
+  test("does not convert its language rewrite back for a Latin-digit permutation", async () => {
+    saveAddonPairs("ar", { "0,1,2,3,4,5,6,7,8,9": "9,8,7,6,5,4,3,2,1,0" });
+    const el = addCounter("12", { map: LATIN });
+    loadScript();
+
+    await switchLanguage("ar");
+    await flush();
+    expect(el.textContent).toBe("87");
+
+    el.textContent = "34";
+    await flush();
+    await flush();
+    expect(el.textContent).toBe("65");
+  }, 1000);
+
+  test("converts a frame still waiting for the observer before rewriting", async () => {
+    const reversed = ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0"];
+    saveAddonPairs("ar", { [reversed.join(",")]: ARABIC_INDIC.join(",") });
+    addCounter("1", { map: reversed }); // Starts the language watcher.
+    loadScript();
+
+    // Bound after the watcher, so the watcher's callback runs first and finds
+    // Elementor's frame still in Latin digits.
+    const el = addCounter("0", { map: reversed });
+    window.dispatchEvent(new window.Event("load"));
+
+    el.textContent = "34";
+    document.documentElement.lang = "ar";
+    await flush();
+    await flush();
+    expect(el.textContent).toBe("٣٤");
+  }, 1000);
 
   test("applies the saved set when the page is already in that language", () => {
     saveAddonPairs("ar", { "0,1,2,3,4,5,6,7,8,9": ARABIC_INDIC.join(",") });

@@ -150,13 +150,25 @@
     // The set the text is written in: the server renders the resting value in
     // the original set.
     var applied = original;
+    var observer = null;
+
+    // A set that reuses Latin digits in other positions makes the plugin's own
+    // output look like a new animation frame, so the records a write produces
+    // are dropped rather than converted again.
+    var write = function (text) {
+      numberEl.textContent = text;
+
+      if (observer) {
+        observer.takeRecords();
+      }
+    };
 
     var updateDigits = function () {
       var current = numberEl.textContent;
       var converted = convert(current, applied);
 
       if (current !== converted) {
-        numberEl.textContent = converted;
+        write(converted);
       }
     };
 
@@ -167,13 +179,19 @@
         return;
       }
 
+      // A frame Elementor wrote that the observer has not converted yet is
+      // still Latin; convert it first so the rewrite starts from the applied set.
+      if (observer && observer.takeRecords().length) {
+        updateDigits();
+      }
+
       var current = numberEl.textContent;
       var rewritten = replaceSet(current, applied, next);
 
       applied = next;
 
       if (current !== rewritten) {
-        numberEl.textContent = rewritten;
+        write(rewritten);
       }
     };
 
@@ -182,7 +200,8 @@
     updateDigits();
 
     // Keep converting while Elementor's animation rewrites the text.
-    new MutationObserver(updateDigits).observe(numberEl, {
+    observer = new MutationObserver(updateDigits);
+    observer.observe(numberEl, {
       childList: true,
       characterData: true,
       subtree: true,
