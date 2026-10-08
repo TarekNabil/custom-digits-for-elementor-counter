@@ -250,6 +250,9 @@ describe("GTranslate Visual Addon overrides", () => {
     ["no pair is saved for the counter's set", { "q,w,e,r,t,y,u,i,o,p": ARABIC_INDIC.join(",") }],
     ["the saved set uses the Arabic comma", { "0,1,2,3,4,5,6,7,8,9": ARABIC_INDIC.join("،") }],
     ["the saved set has too few entries", { "0,1,2,3,4,5,6,7,8,9": "٠,١,٢" }],
+    ["an entry in the saved set is two characters", { "0,1,2,3,4,5,6,7,8,9": "٠٠,١,٢,٣,٤,٥,٦,٧,٨,٩" }],
+    ["an entry in the saved set is empty", { "0,1,2,3,4,5,6,7,8,9": "٠,,٢,٣,٤,٥,٦,٧,٨,٩" }],
+    ["the saved translation is not text", { "0,1,2,3,4,5,6,7,8,9": 123 }],
   ])("keeps the original set when %s", async (_label, pairs) => {
     saveAddonPairs("ar", pairs);
     const el = addCounter("2025", { map: LATIN });
