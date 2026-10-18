@@ -14,7 +14,7 @@
 const { spawnSync } = require("child_process");
 const path = require("path");
 
-const { CONTAINER_SUITE, createPage, ensureEnvironment, ensureTheme, log, wp, writeState } =
+const { CONTAINER_SUITE, createPage, deletePage, ensureEnvironment, ensureTheme, log, wp, writeState } =
     require("./lib/environment");
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -30,16 +30,6 @@ function signIn(container, url) {
     }
 
     return cookies;
-}
-
-/** Deletes the run's page; a failure is logged, never thrown over a test result. */
-function removePage(container, postId) {
-    try {
-        wp(container, ["post", "delete", String(postId), "--force"]);
-        log(`deleted page ${postId}`);
-    } catch (error) {
-        log(`could not delete page ${postId}: ${error.message}`);
-    }
 }
 
 const container = ensureEnvironment();
@@ -63,7 +53,7 @@ try {
 } finally {
     // By id rather than through teardown(), which reads it back from state.json:
     // the page must go even when signing in or writing the state failed.
-    removePage(container, postId);
+    deletePage(container, postId);
 }
 
 if (result.error) {

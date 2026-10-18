@@ -239,6 +239,23 @@ function forSuite(suite) {
     }
 
     /**
+     * Deletes a page by id; a failure is logged, never thrown.
+     *
+     * Setup code calls this directly when it fails between createPage() and
+     * writeState(), because teardown() can only find pages that reached the state.
+     */
+    function deletePage(container, postId) {
+        try {
+            wp(container, ["post", "delete", String(postId), "--force"]);
+            log(`deleted page ${postId}`);
+        } catch (error) {
+            // Never fail a passing run over cleanup; the page is harmless and the
+            // next run creates its own.
+            log(`could not delete page ${postId}: ${error.message}`);
+        }
+    }
+
+    /**
      * Removes the page created for the run.
      *
      * The environment itself is left running: the next run reuses it, which saves
@@ -253,14 +270,7 @@ function forSuite(suite) {
             return;
         }
 
-        try {
-            wp(state.container, ["post", "delete", String(state.postId), "--force"]);
-            log(`deleted page ${state.postId}`);
-        } catch (error) {
-            // Never fail a passing run over cleanup; the page is harmless and the
-            // next run creates its own.
-            log(`could not delete page ${state.postId}: ${error.message}`);
-        }
+        deletePage(state.container, state.postId);
     }
 
     return {
@@ -269,6 +279,7 @@ function forSuite(suite) {
         PAGE_FILE,
         PLUGIN_SLUG,
         createPage,
+        deletePage,
         ensureEnvironment,
         ensureTheme,
         log,
