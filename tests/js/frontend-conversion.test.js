@@ -16,10 +16,17 @@ function loadScript() {
   require(SCRIPT);
 }
 
-/** Builds a counter number element as the PHP render attributes leave it. */
-function addCounter(text, { flag = "yes", map = ARABIC_INDIC } = {}) {
+/**
+ * Builds a counter number element as the PHP render attributes leave it.
+ *
+ * `fromValue` is Elementor's raw starting number. It defaults to the text, which
+ * models a resting value the server did not convert; pass the Latin starting
+ * number with converted text to model what the server normally sends.
+ */
+function addCounter(text, { flag = "yes", map = ARABIC_INDIC, fromValue = text } = {}) {
   const el = document.createElement("span");
   el.className = "elementor-counter-number";
+  el.setAttribute("data-from-value", fromValue);
   if (null !== flag) {
     el.setAttribute(FLAG_ATTRIBUTE, flag);
   }
@@ -70,6 +77,32 @@ describe("initial conversion", () => {
     const second = addCounter("2");
     loadScript();
     expect([first.textContent, second.textContent]).toEqual(["١", "٢"]);
+  });
+});
+
+describe("a resting value the server already converted", () => {
+  const REVERSED = ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0"];
+
+  // Converting 213 again would give back 786, the unconverted starting number.
+  test("is not converted a second time for a set reusing Latin digits", () => {
+    const el = addCounter("213", { map: REVERSED, fromValue: "786" });
+    loadScript();
+    expect(el.textContent).toBe("213");
+  });
+
+  test("still has the animation's frames converted", async () => {
+    const el = addCounter("213", { map: REVERSED, fromValue: "786" });
+    loadScript();
+
+    el.textContent = "800";
+    await flush();
+    expect(el.textContent).toBe("199");
+  });
+
+  test("is left as the server sent it for a non-Latin set", () => {
+    const el = addCounter("٧٨٦", { fromValue: "786" });
+    loadScript();
+    expect(el.textContent).toBe("٧٨٦");
   });
 });
 
@@ -304,6 +337,7 @@ describe("late-rendered counters", () => {
     el.className = "elementor-counter-number";
     el.setAttribute(FLAG_ATTRIBUTE, "yes");
     el.setAttribute(MAP_ATTRIBUTE, JSON.stringify(ARABIC_INDIC));
+    el.setAttribute("data-from-value", "88");
     el.textContent = "88";
     scope.appendChild(el);
 
