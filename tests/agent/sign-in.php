@@ -10,6 +10,10 @@
  * @package CustomDigitsForElementorCounter
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 $user = get_user_by( 'login', 'admin' );
 
 if ( ! $user ) {
