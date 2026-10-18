@@ -519,7 +519,9 @@ final class Plugin {
 					return $matches[0];
 				}
 
-				return $tag . Digits::replace_set( $matches[3], $original, $translated ) . $matches[4];
+				// The counter text is markup: convert_in_markup() wrote the original
+				// set escaped, and the translated set must go in escaped as well.
+				return $tag . Digits::replace_set( $matches[3], Digits::escape( $original ), Digits::escape( $translated ) ) . $matches[4];
 			},
 			$html
 		);
