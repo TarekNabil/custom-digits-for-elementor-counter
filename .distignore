@@ -21,6 +21,7 @@
 .wp-env
 .wp-env.json
 .wp-env.override.json
+.env
 .distignore
 .editorconfig
 node_modules
@@ -33,6 +34,7 @@ package-lock.json
 jest.config.js
 jest.smoke.config.js
 playwright.config.js
+e2e.config.ts
 composer.json
 composer.lock
 phpcs.xml
@@ -52,12 +54,15 @@ codecov.yml
 test-results
 playwright-report
 blob-report
+.e2e
 
 # AI agent tooling
 .claude
 .agents
 .config
 .opencode
+.mcp.json
+.cursor
 skills-lock.json
 CLAUDE.md
 AGENTS.md

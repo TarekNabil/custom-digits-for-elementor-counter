@@ -96,6 +96,7 @@ the question, not to whichever suite is easiest to extend.
 | Jest (`tests/js/`) | `npm test` | Frontend script logic in jsdom — the refusal branches, the observer, the Elementor hooks |
 | Smoke (`tests/smoke/`) | `npm run test:smoke` | Does it boot inside real WordPress: classes, hooks, no PHP errors, and that the **server** sent converted digits |
 | E2E (`tests/e2e/`) | `npm run test:e2e` | What the page actually does in real browsers: the count-up, no Latin flash, the control widget |
+| Agent (`tests/agent/`) | `npm run test:agent` | The flow as a site builder does it: an AI agent sets a digit set in the Elementor editor, publishes, and the visitor's page must show it |
 
 Smoke deliberately does **not** assert on render attributes or the enqueued
 script. E2E proves those functionally, and proves them more strongly, because it
@@ -104,9 +105,23 @@ coverage is the server-rendered first value: e2e samples after the frontend
 script has run, so only smoke can tell a server-side conversion from a fast
 client-side one.
 
-`tests/lib/` holds what smoke and e2e share — the wp-env plumbing
+The agent suite runs on [TesterArmy e2e](https://e2e.tester.army/docs) with
+GPT-6 Luna on OpenCode Go as the model, so it needs `npx e2e login
+opencode-console` once and draws on the Go subscription when a step is not in
+the replay cache. `npm run test:agent -- --agent gemini` runs it on Gemini 3.5
+Flash-Lite instead, on Google AI Studio's free tier, with
+`GOOGLE_GENERATIVE_AI_API_KEY` in a gitignored `.env`. CI runs the default
+agent weekly, from `.github/workflows/agent.yml`, with an OpenCode Console
+service account key in the `OPENCODE_API_KEY` secret, or on demand from the
+Actions tab. It is the only suite that touches the editor;
+keep exact value checks in E2E and give this one what needs judgment or the
+editor UI. The e2e runner has no global setup, so `tests/agent/run.js` boots
+wp-env, publishes the fixture and signs in before calling `e2e run`; a bare
+`npx e2e run` finds no state.
+
+`tests/lib/` holds what smoke, e2e and agent share — the wp-env plumbing
 (`forSuite()`), the Elementor fixture, and `fixture.js` describing the values
-both suites assert against.
+smoke and e2e assert against.
 
 ## Project Structure
 
@@ -127,7 +142,8 @@ both suites assert against.
 │   ├── lib/                             # Shared by smoke and e2e: wp-env plumbing,
 │   │                                    #   Elementor fixture, expected values
 │   ├── smoke/                           # Jest: boots wp-env, reads the rendered HTML
-│   └── e2e/                             # Playwright: drives real browsers
+│   ├── e2e/                             # Playwright: drives real browsers
+│   └── agent/                           # TesterArmy e2e: an AI agent drives the editor
 ├── README.md                            # User-facing docs
 ├── .wp-env.json                         # Local dev environment config
 └── CLAUDE.md                            # This file
