@@ -90,12 +90,17 @@ final class Digits {
 	/**
 	 * Replaces Latin digits in a string using a custom digit set.
 	 *
+	 * A single pass, as the frontend script converts: a set that reuses Latin
+	 * digits, such as 9,8,7,...,0, must not have one replacement feed the next,
+	 * or the server-rendered value would differ from the animated one.
+	 *
 	 * @param string   $text   Text containing Latin digits.
 	 * @param string[] $digits Ten replacement characters indexed 0-9.
-	 * @return string Text with each Latin digit swapped for its custom equivalent.
+	 * @return string Text with each Latin digit swapped for its custom equivalent,
+	 *                unchanged if the set does not contain ten entries.
 	 */
 	public static function convert( $text, $digits ) {
-		return str_replace( self::LATIN, $digits, $text );
+		return self::replace_set( $text, self::LATIN, $digits );
 	}
 
 	/**

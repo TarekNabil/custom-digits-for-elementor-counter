@@ -229,9 +229,16 @@
       }
     };
 
-    // Convert the resting value immediately, before the count-up animation runs.
+    // The server sends the resting value already converted, and converting it
+    // again would scramble a set that reuses Latin digits: 9,8,...,0 turns 786
+    // into 213, and 213 back into 786. Only text still showing Elementor's raw
+    // starting number, which the server failed to convert, is converted here,
+    // before any language rewrite, which expects text in the original set.
+    if (numberEl.textContent.trim() === numberEl.getAttribute("data-from-value")) {
+      updateDigits();
+    }
+
     updateLanguage();
-    updateDigits();
 
     // Keep converting while Elementor's animation rewrites the text.
     observer = new MutationObserver(updateDigits);
