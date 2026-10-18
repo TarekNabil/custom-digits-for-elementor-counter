@@ -54,6 +54,17 @@ describe("initial conversion", () => {
     expect(el.textContent).toBe("١,٢٣٤.٥+");
   });
 
+  // The same inputs and outputs as Digits::convert() in tests/DigitsTest.php:
+  // the server's first paint and the script's frames must agree.
+  test.each([
+    ["a reversed Latin set", "9,8,7,6,5,4,3,2,1,0", "2026", "7973"],
+    ["Latin mixed with Arabic-Indic", "٠,3,٢,٣,٤,٥,٦,٧,٨,٩", "13", "3٣"],
+  ])("converts %s in one pass, as the server does", (_label, set, text, expected) => {
+    const el = addCounter(text, { map: set.split(",") });
+    loadScript();
+    expect(el.textContent).toBe(expected);
+  });
+
   test("converts every counter on the page", () => {
     const first = addCounter("1");
     const second = addCounter("2");
