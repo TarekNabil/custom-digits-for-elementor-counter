@@ -1,0 +1,87 @@
+name: Agent Test
+
+# The agent suite drives the Elementor editor with an AI model, so every run
+# spends model calls on the OpenCode Go subscription. Weekly is enough to catch
+# what it exists for, an Elementor release that breaks the editor flow: wp-env
+# installs the latest Elementor on every run. The button covers a check before
+# a release.
+on:
+  schedule:
+    # Mondays, 03:00 UTC.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  agent:
+    name: WordPress + Elementor (e2e agent)
+    runs-on: ubuntu-latest
+    # Booting wp-env from cold pulls Docker images, WordPress, Elementor and the
+    # theme; the agent steps themselves take about a minute.
+    timeout-minutes: 20
+
+    steps:
+      # Without the key, opencodeConsole() falls back to a browser login CI does
+      # not have, and the run would fail only after booting WordPress.
+      - name: Check the OpenCode key
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          if [ -z "$OPENCODE_API_KEY" ]; then
+            echo "::error::Set the OPENCODE_API_KEY repository secret to an OpenCode Console service account key."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing in this workflow runs an authenticated git command, so the
+          # token does not need to stay on disk where a dependency install
+          # script could read it.
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The Chromium build the e2e engine pins, which is not necessarily the one
+      # @playwright/test would install.
+      - name: Install the e2e browser
+        run: npx e2e-web install chromium --with-deps
+
+      - name: Report Docker version
+        run: |
+          docker --version
+          docker compose version
+
+      # Runs the default agent (GPT-6 Luna on OpenCode Go). The replay cache is
+      # not committed, so in CI every agent step calls the model.
+      - name: Run agent tests
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: npm run test:agent
+
+      # tests/agent/output/state.json is left out on purpose: it holds the run's
+      # admin cookies, and artifacts are readable by anyone who can read the repo.
+      - name: Upload artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agent-output
+          path: |
+            .e2e/report.json
+            .e2e/artifacts/
+            tests/agent/output/wp-env.log
+          retention-days: 7
+          if-no-files-found: warn

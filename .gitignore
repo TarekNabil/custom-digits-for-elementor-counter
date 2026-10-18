@@ -1,6 +1,7 @@
 # WordPress environment
 .wp-env
 .wp-env.override.json
+.env
 wp-content/
 debug.log
 
@@ -18,6 +19,8 @@ package-lock.json.bak
 skills-lock.json
 .config/
 .opencode/
+.mcp.json
+.cursor/
 
 # IDE & editor
 .vscode/
@@ -57,3 +60,16 @@ tests/e2e/output/
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Agent test artifacts
+tests/agent/output/
+.e2e/artifacts/
+.e2e/cache/
+.e2e/sessions/
+.e2e/report.json
+.e2e/ai-trace.json
+.e2e/junit.xml
+.e2e/summary.md
+.e2e/failures/
+.e2e/logs/
+.e2e/videos/
