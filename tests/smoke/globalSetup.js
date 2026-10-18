@@ -17,6 +17,7 @@ const {
     CONTAINER_SUITE,
     PAGE_FILE,
     createPage,
+    deletePage,
     ensureEnvironment,
     ensureTheme,
     log,
@@ -47,22 +48,29 @@ module.exports = async function globalSetup() {
 
     const { postId, permalink } = createPage(container, "Custom Digits smoke test");
 
-    const response = await fetch(permalink);
-    const html = await response.text();
+    // Until writeState() records the page, teardown() cannot find it, and Jest
+    // skips globalTeardown when globalSetup throws; so a failure here deletes it.
+    try {
+        const response = await fetch(permalink);
+        const html = await response.text();
 
-    fs.mkdirSync(path.dirname(PAGE_FILE), { recursive: true });
-    fs.writeFileSync(PAGE_FILE, html);
+        fs.mkdirSync(path.dirname(PAGE_FILE), { recursive: true });
+        fs.writeFileSync(PAGE_FILE, html);
 
-    writeState({
-        container,
-        postId,
-        permalink,
-        httpStatus: response.status,
-        wordpressVersion,
-        elementorVersion,
-        activePlugins,
-        baseUrl: BASE_URL,
-    });
+        writeState({
+            container,
+            postId,
+            permalink,
+            httpStatus: response.status,
+            wordpressVersion,
+            elementorVersion,
+            activePlugins,
+            baseUrl: BASE_URL,
+        });
 
-    log(`rendered ${permalink} -> HTTP ${response.status}, ${html.length} bytes`);
+        log(`rendered ${permalink} -> HTTP ${response.status}, ${html.length} bytes`);
+    } catch (error) {
+        deletePage(container, postId);
+        throw error;
+    }
 };
