@@ -110,6 +110,31 @@ final class DigitsTest extends TestCase {
 		$this->assertSame( 'no digits here', Digits::convert( 'no digits here', $this->arabic_indic_map() ) );
 	}
 
+	/**
+	 * A set that reuses Latin digits must convert in one pass, exactly as the
+	 * frontend script does; tests/js/frontend-conversion.test.js asserts the
+	 * same inputs and outputs.
+	 *
+	 * @dataProvider provide_sets_reusing_latin_digits
+	 *
+	 * @param string $set      Raw "Custom Digits" value.
+	 * @param string $text     Latin input.
+	 * @param string $expected Converted output.
+	 */
+	public function test_conversion_is_a_single_pass_for_sets_reusing_latin_digits( string $set, string $text, string $expected ): void {
+		$this->assertSame( $expected, Digits::convert( $text, Digits::parse( $set ) ) );
+	}
+
+	/**
+	 * @return array<string, array{0: string, 1: string, 2: string}>
+	 */
+	public function provide_sets_reusing_latin_digits(): array {
+		return [
+			'reversed Latin set'            => [ '9,8,7,6,5,4,3,2,1,0', '2026', '7973' ],
+			'Latin mixed with Arabic-Indic' => [ '٠,3,٢,٣,٤,٥,٦,٧,٨,٩', '13', '3٣' ],
+		];
+	}
+
 	public function test_replaces_one_digit_set_with_another(): void {
 		$devanagari = [ '०', '१', '२', '३', '४', '५', '६', '७', '८', '९' ];
 
