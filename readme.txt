@@ -4,7 +4,7 @@ Tags: elementor, counter, arabic, numerals, rtl
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -125,10 +125,19 @@ Elementor caches rendered widget markup. Saving the page in the editor clears th
 
 == Changelog ==
 
+= 1.1.0 =
+* Security: Custom digit characters are now HTML-escaped when the counter is rendered, so a set such as `<`, `&` or quotes can no longer add markup to the page.
+* New: Translation plugin support. WPML can translate the Custom Digits field, TranslatePress can translate a counter's digit set, and GTranslate can switch it through the GTranslate Visual Addon. See "Translation plugins" in the description.
+* New: The plugin's own text can be translated (translation template in `languages/`).
+* Fix: Digit sets that reuse Latin digits, such as `9,8,7,6,5,4,3,2,1,0`, now show the same number before and during the count-up.
+
 = 1.0.0 =
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Security fix: custom digits are now escaped in the page. Adds WPML, TranslatePress and GTranslate support. Recommended for all users.
 
 = 1.0.0 =
 Initial release.

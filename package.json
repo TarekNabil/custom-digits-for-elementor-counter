@@ -1,6 +1,6 @@
 {
     "name": "custom-digits-for-elementor-counter",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Display Elementor's native Counter in any numeral system or custom character set.",
     "license": "GPL-3.0-or-later",
     "author": "Tarek Nabil",
