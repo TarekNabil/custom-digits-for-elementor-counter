@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Custom Digits for Elementor Counter
  * Description:       Display Elementor's native Counter in any numeral system or custom character set — Arabic-Indic, Devanagari, Latin, or your own.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Author:            Tarek Nabil
  * License:           GPL-3.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CUSTOM_DIGITS_COUNTER_VERSION', '1.0.0' );
+define( 'CUSTOM_DIGITS_COUNTER_VERSION', '1.1.0' );
 define( 'CUSTOM_DIGITS_COUNTER_PLUGIN_FILE', __FILE__ );
 define( 'CUSTOM_DIGITS_COUNTER_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CUSTOM_DIGITS_COUNTER_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
