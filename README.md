@@ -90,7 +90,7 @@ when the page renders, so the counter keeps its Latin digits.
 Each counter keeps its own digit set, saved with the rest of its settings, so
 every language can show its own digits — Latin on the English page,
 Arabic-Indic on the Arabic one. Polylang and Loco Translate work with this
-as-is; WPML and GTranslate need a few steps.
+as-is; WPML, TranslatePress and GTranslate need a few steps.
 
 #### Polylang
 
@@ -124,6 +124,25 @@ translates Elementor widgets while String Translation is active.
    them, for example `٠,١,٢,٣,٤,٥,٦,٧,٨,٩`. A localized comma such as the
    Arabic `،` is rejected, and the counter falls back to Latin digits — worth
    checking if you use automatic translation.
+
+#### TranslatePress
+
+1. **Fill in the field on the original page, even if that language uses Latin
+   digits.** A counter with an empty field has no digit set to translate. For
+   Latin digits, enter `0,1,2,3,4,5,6,7,8,9`.
+2. **Translate the digit set in TranslatePress's editor.** Open the page with
+   **Translate Page**, switch to the target language and select the counter's
+   digit set: it is listed with the page's other strings, and the counter shows
+   TranslatePress's pencil icon. Enter that language's digits, keeping the
+   plain comma between them, for example `٠,١,٢,٣,٤,٥,٦,٧,٨,٩`.
+3. **View the page in that language.** The counter shows the translated digits
+   from the first moment and counts up in them.
+
+Counters with the same digit set share one translation, because TranslatePress
+translates identical text once. To show different digits on two counters in the
+same language, give them different digit sets on the original page. Automatic
+translation skips the digit set, since it could replace the plain comma with a
+localized one, so enter it by hand.
 
 #### GTranslate
 
