@@ -203,6 +203,57 @@ final class DigitsTest extends TestCase {
 		$this->assertSame( $markup, Digits::convert_in_markup( $markup, [] ) );
 	}
 
+	/**
+	 * A set may hold any ten characters, so it must never be able to write
+	 * markup into the page.
+	 */
+	public function test_markup_conversion_escapes_html_in_the_digit_set(): void {
+		$markup = '<span class="elementor-counter-number" data-to-value="123">123</span>';
+
+		$this->assertSame(
+			'<span class="elementor-counter-number" data-to-value="123">&lt;b&gt;</span>',
+			Digits::convert_in_markup( $markup, Digits::parse( '0,<,b,>,4,5,6,7,8,9' ) )
+		);
+	}
+
+	public function test_markup_conversion_escapes_every_html_special_character(): void {
+		$markup = '<span class="elementor-counter-number">01234</span>';
+
+		$this->assertSame(
+			'<span class="elementor-counter-number">&amp;&lt;&gt;&quot;&apos;</span>',
+			Digits::convert_in_markup( $markup, Digits::parse( "&,<,>,\",',5,6,7,8,9" ) )
+		);
+	}
+
+	/**
+	 * Escaping belongs to the HTML path only: convert() returns plain text.
+	 */
+	public function test_plain_conversion_does_not_escape(): void {
+		$this->assertSame( '<b>', Digits::convert( '123', Digits::parse( '0,<,b,>,4,5,6,7,8,9' ) ) );
+	}
+
+	public function test_escaping_leaves_existing_digit_sets_unchanged(): void {
+		$devanagari = [ '०', '१', '२', '३', '४', '५', '६', '७', '८', '९' ];
+
+		$this->assertSame( $this->arabic_indic_map(), Digits::escape( $this->arabic_indic_map() ) );
+		$this->assertSame( $devanagari, Digits::escape( $devanagari ) );
+	}
+
+	/**
+	 * What the TranslatePress integration does to the text of a counter the
+	 * server already converted: swap the escaped original set for the escaped
+	 * translation.
+	 */
+	public function test_escaped_counter_text_can_be_rewritten_into_another_set(): void {
+		$original   = Digits::parse( '0,<,b,>,4,5,6,7,8,9' );
+		$translated = Digits::parse( '٠,&,",\',٤,٥,٦,٧,٨,٩' );
+
+		$this->assertSame(
+			'&amp;&quot;&apos;',
+			Digits::replace_set( '&lt;b&gt;', Digits::escape( $original ), Digits::escape( $translated ) )
+		);
+	}
+
 	public function test_counts_characters_not_bytes(): void {
 		$this->assertSame( 1, Digits::character_length( '٠' ) );
 		$this->assertSame( 1, Digits::character_length( 'a' ) );

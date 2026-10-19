@@ -139,6 +139,7 @@ final class Digits {
 			return $content;
 		}
 
+		$digits = self::escape( $digits );
 		$output = preg_replace_callback(
 			self::COUNTER_NUMBER_PATTERN,
 			function ( $matches ) use ( $digits ) {
@@ -153,6 +154,26 @@ final class Digits {
 		}
 
 		return $output;
+	}
+
+	/**
+	 * Escapes each character of a digit set for use as HTML text.
+	 *
+	 * A set may hold any ten characters, including `<`, `&` or quotes, so it must
+	 * be escaped before going into markup. htmlspecialchars() rather than
+	 * esc_html() keeps this class free of WordPress. ENT_HTML5 writes `'` as
+	 * `&apos;`, an entity with no digits in it for a later replacement to alter.
+	 *
+	 * @param string[] $digits Ten characters indexed 0-9.
+	 * @return string[] The same characters, HTML-escaped, in the same order.
+	 */
+	public static function escape( $digits ) {
+		return array_map(
+			function ( $digit ) {
+				return htmlspecialchars( $digit, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+			},
+			$digits
+		);
 	}
 
 	/**

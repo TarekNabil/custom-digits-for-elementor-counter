@@ -44,6 +44,26 @@ $checks['rendered-version option is stamped'] =
 	defined( 'CUSTOM_DIGITS_COUNTER_VERSION' )
 	&& get_option( 'custom_digits_counter_rendered_version' ) === CUSTOM_DIGITS_COUNTER_VERSION;
 
+// The TranslatePress path, through the real filter: TranslatePress is not
+// installed here, but the plugin hooks trp_translated_html regardless. The
+// counter is as the server rendered it, with HTML-significant digits escaped,
+// after TranslatePress rewrote the set attribute to the translation.
+$original   = [ '0', '<', 'b', '>', '4', '5', '6', '7', '8', '9' ];
+$translated = [ '٠', '&', '"', "'", '٤', '٥', '٦', '٧', '٨', '٩' ];
+$counter    = sprintf(
+	'<span class="elementor-counter-number" data-custom-digits-counter-map="%s" data-custom-digits-counter-set="%s">&lt;b&gt;</span>',
+	esc_attr( wp_json_encode( $original ) ),
+	esc_attr( implode( ',', $translated ) )
+);
+$rendered   = apply_filters( 'trp_translated_html', $counter );
+
+$checks['TranslatePress: translated digits written escaped'] =
+	1 === preg_match( '/>&amp;&quot;&apos;<\/span>$/', $rendered );
+
+$checks['TranslatePress: digit map switched to the translation'] =
+	1 === preg_match( '/data-custom-digits-counter-map="([^"]*)"/', $rendered, $map )
+	&& json_decode( html_entity_decode( $map[1], ENT_QUOTES, 'UTF-8' ), true ) === $translated;
+
 foreach ( $checks as $label => $result ) {
 	echo $result ? 'PASS ' : 'FAIL ', $label, "\n";
 }
