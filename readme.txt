@@ -44,7 +44,7 @@ Leave the field empty and nothing changes. Counters render exactly as Elementor 
 
 = Translation plugins =
 
-Each counter keeps its own digit set, saved with the rest of its settings, so every language can show its own digits — Latin on the English page, Arabic-Indic on the Arabic one. Polylang and Loco Translate work with this as-is; WPML and GTranslate need a few steps.
+Each counter keeps its own digit set, saved with the rest of its settings, so every language can show its own digits — Latin on the English page, Arabic-Indic on the Arabic one. Polylang and Loco Translate work with this as-is; WPML, TranslatePress and GTranslate need a few steps.
 
 **Polylang** — no setup needed. Every language has its own page, with its own widgets. Open the translation in Elementor, select the counter and enter that language's digit set in its Custom Digits field.
 
@@ -55,6 +55,14 @@ Each counter keeps its own digit set, saved with the rest of its settings, so ev
 1. Fill in the Custom Digits field on the original page, even if that language uses Latin digits. WPML only sends fields that have a value, so an empty field never reaches the translation editor. For Latin digits, enter `0,1,2,3,4,5,6,7,8,9` — the counter looks exactly as it did before.
 2. Translate the page. The value appears as **Counter: Custom Digits**. In the Classic Translation Editor it is listed with the counter's other fields, like any other text. The Advanced Translation Editor hides it by default, because it treats content made only of numbers and punctuation as not needing translation — search for the value in the editor's search bar to make it appear.
 3. Enter the target language's digits, keeping the plain comma between them, for example `٠,١,٢,٣,٤,٥,٦,٧,٨,٩`. A localized comma such as the Arabic `،` is rejected, and the counter falls back to Latin digits — worth checking if you use automatic translation.
+
+**TranslatePress**
+
+1. Fill in the Custom Digits field on the original page, even if that language uses Latin digits. A counter with an empty field has no digit set to translate. For Latin digits, enter `0,1,2,3,4,5,6,7,8,9`.
+2. Translate the digit set in TranslatePress's editor. Open the page with **Translate Page**, switch to the target language and select the counter's digit set: it is listed with the page's other strings, and the counter shows TranslatePress's pencil icon. Enter that language's digits, keeping the plain comma between them, for example `٠,١,٢,٣,٤,٥,٦,٧,٨,٩`.
+3. View the page in that language. The counter shows the translated digits from the first moment and counts up in them.
+
+Counters with the same digit set share one translation, because TranslatePress translates identical text once. To show different digits on two counters in the same language, give them different digit sets on the original page. Automatic translation skips the digit set, since it could replace the plain comma with a localized one, so enter it by hand.
 
 **GTranslate** — requires the free GTranslate Visual Addon plugin, which stores manual translation fixes. GTranslate's own translation can't change the counter: the count-up redraws the number on every frame.
 
