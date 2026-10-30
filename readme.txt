@@ -1,5 +1,5 @@
 === Custom Digits for Elementor Counter ===
-Contributors: tareknabil
+Contributors: teka34
 Tags: elementor, counter, arabic, numerals, rtl
 Requires at least: 6.8
 Tested up to: 7.1
